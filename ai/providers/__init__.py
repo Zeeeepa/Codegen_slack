@@ -29,18 +29,18 @@ def get_available_providers():
     # Get models from all providers
     models = {}
     
-    # Add models from OpenAI instances
-    for instance_id in manager.get_available_openai_instances():
-        instance = manager.get_openai_instance(instance_id)
-        if instance:
-            for model_id, model_info in instance.get_models().items():
+    # Add models from OpenAI characters
+    for character_name in manager.get_available_openai_characters():
+        character = manager.get_openai_character(character_name)
+        if character:
+            for model_id, model_info in character.get_models().items():
                 models[model_id] = model_info
     
-    # Add models from Anthropic instances
-    for instance_id in manager.get_available_anthropic_instances():
-        instance = manager.get_anthropic_instance(instance_id)
-        if instance:
-            for model_id, model_info in instance.get_models().items():
+    # Add models from Anthropic characters
+    for character_name in manager.get_available_anthropic_characters():
+        character = manager.get_anthropic_character(character_name)
+        if character:
+            for model_id, model_info in character.get_models().items():
                 models[model_id] = model_info
     
     # Add models from other providers
@@ -50,24 +50,24 @@ def get_available_providers():
     return models
 
 
-def _get_provider(provider_name: str, instance_id: Optional[str] = None):
+def _get_provider(provider_name: str, character_name: Optional[str] = None):
     """
     Get a provider instance.
     
     Args:
         provider_name: The name of the provider
-        instance_id: Optional instance ID for providers that support multiple instances
+        character_name: Optional character name for providers that support multiple characters
     
     Returns:
         A provider instance
     """
     if provider_name.lower() == "anthropic":
-        if instance_id:
-            return manager.get_anthropic_instance(instance_id)
+        if character_name:
+            return manager.get_anthropic_character(character_name)
         return AnthropicAPI()
     elif provider_name.lower() == "openai":
-        if instance_id:
-            return manager.get_openai_instance(instance_id)
+        if character_name:
+            return manager.get_openai_character(character_name)
         return OpenAI_API()
     elif provider_name.lower() == "vertexai":
         return VertexAPI()
@@ -104,9 +104,9 @@ def parse_command_args(text: str) -> Tuple[Dict[str, str], str]:
 def get_provider_response(user_id: str, prompt: str, context: Optional[List] = [], system_content=DEFAULT_SYSTEM_CONTENT):
     formatted_context = "\n".join([f"{msg['user']}: {msg['text']}" for msg in context])
     
-    # Check if prompt contains instance_id parameter
+    # Check if prompt contains character parameter
     args, remaining_text = parse_command_args(prompt)
-    instance_id = args.get("instance_id")
+    character_name = args.get("character")
     model_override = args.get("model")
     
     # Use remaining text as prompt if args were extracted
@@ -122,11 +122,11 @@ def get_provider_response(user_id: str, prompt: str, context: Optional[List] = [
         if model_override:
             model_name = model_override
         
-        # Use the multi-instance manager if instance_id is provided
-        if instance_id:
+        # Use the character instance manager if character_name is provided
+        if character_name:
             response = manager.generate_response(
                 provider=provider_name,
-                instance_id=instance_id,
+                character_name=character_name,
                 model=model_name,
                 prompt=full_prompt,
                 system_content=system_content

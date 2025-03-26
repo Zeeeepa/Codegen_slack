@@ -20,40 +20,40 @@ class AnthropicAPI(BaseAPIProvider):
         "claude-3-opus-20240229": {"name": "Claude 3 Opus", "provider": "Anthropic", "max_tokens": 4096},
     }
 
-    def __init__(self, instance_id=None):
+    def __init__(self, character_name=None):
         """
         Initialize the Anthropic API provider.
         
         Args:
-            instance_id: Optional ID to specify which API key to use.
+            character_name: Optional character name to specify which API key to use.
                          If None, uses the default API key.
         """
         self.api_keys = get_api_keys("ANTHROPIC")
         
-        if instance_id and instance_id in self.api_keys:
-            self.api_key = self.api_keys[instance_id]
-            self.instance_id = instance_id
+        if character_name and character_name in self.api_keys:
+            self.api_key = self.api_keys[character_name]
+            self.character_name = character_name
         elif "default" in self.api_keys:
             self.api_key = self.api_keys["default"]
-            self.instance_id = "default"
+            self.character_name = "default"
         else:
             self.api_key = os.environ.get("ANTHROPIC_API_KEY")
-            self.instance_id = "default"
+            self.character_name = "default"
         
         # Initialize the client
         if self.api_key:
             self.client = anthropic.Anthropic(api_key=self.api_key)
         else:
             self.client = None
-            logger.warning(f"No API key found for Anthropic instance {instance_id}")
+            logger.warning(f"No API key found for Anthropic character '{character_name}'")
 
     @classmethod
-    def get_available_instances(cls):
+    def get_available_characters(cls):
         """
-        Get a list of available API key instances.
+        Get a list of available API key characters.
         
         Returns:
-            A list of instance IDs that can be used to initialize this provider.
+            A list of character names that can be used to initialize this provider.
         """
         return list(get_api_keys("ANTHROPIC").keys())
 
@@ -71,7 +71,7 @@ class AnthropicAPI(BaseAPIProvider):
     def generate_response(self, prompt: str, system_content: str) -> str:
         try:
             if not self.client:
-                raise ValueError(f"No valid API key for Anthropic instance {self.instance_id}")
+                raise ValueError(f"No valid API key for Anthropic character '{self.character_name}'")
                 
             response = self.client.messages.create(
                 model=self.current_model,

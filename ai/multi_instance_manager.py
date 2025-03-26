@@ -6,105 +6,105 @@ from env_loader import get_api_keys
 
 logger = logging.getLogger(__name__)
 
-class MultiInstanceManager:
+class CharacterInstanceManager:
     """
-    Manages multiple instances of API providers with different API keys.
-    This allows for load balancing, fallback, and using multiple accounts.
+    Manages character-based instances of API providers with different API keys.
+    Each character has its own API key and personality.
     """
     
     def __init__(self):
-        self.openai_instances: Dict[str, OpenAI_API] = {}
-        self.anthropic_instances: Dict[str, AnthropicAPI] = {}
-        self.initialize_instances()
+        self.openai_characters: Dict[str, OpenAI_API] = {}
+        self.anthropic_characters: Dict[str, AnthropicAPI] = {}
+        self.initialize_characters()
     
-    def initialize_instances(self):
-        """Initialize all available API instances from environment variables."""
-        # Initialize OpenAI instances
+    def initialize_characters(self):
+        """Initialize all available character API instances from environment variables."""
+        # Initialize OpenAI characters
         openai_keys = get_api_keys("OPENAI")
-        for instance_id in openai_keys:
+        for character_name in openai_keys:
             try:
-                self.openai_instances[instance_id] = OpenAI_API(instance_id=instance_id)
-                logger.info(f"Initialized OpenAI instance {instance_id}")
+                self.openai_characters[character_name] = OpenAI_API(character_name=character_name)
+                logger.info(f"Initialized OpenAI character '{character_name}'")
             except Exception as e:
-                logger.error(f"Failed to initialize OpenAI instance {instance_id}: {str(e)}")
+                logger.error(f"Failed to initialize OpenAI character '{character_name}': {str(e)}")
         
-        # Initialize Anthropic instances
+        # Initialize Anthropic characters
         anthropic_keys = get_api_keys("ANTHROPIC")
-        for instance_id in anthropic_keys:
+        for character_name in anthropic_keys:
             try:
-                self.anthropic_instances[instance_id] = AnthropicAPI(instance_id=instance_id)
-                logger.info(f"Initialized Anthropic instance {instance_id}")
+                self.anthropic_characters[character_name] = AnthropicAPI(character_name=character_name)
+                logger.info(f"Initialized Anthropic character '{character_name}'")
             except Exception as e:
-                logger.error(f"Failed to initialize Anthropic instance {instance_id}: {str(e)}")
+                logger.error(f"Failed to initialize Anthropic character '{character_name}': {str(e)}")
     
-    def get_openai_instance(self, instance_id: Optional[str] = None) -> Optional[OpenAI_API]:
+    def get_openai_character(self, character_name: Optional[str] = None) -> Optional[OpenAI_API]:
         """
-        Get an OpenAI API instance by ID.
+        Get an OpenAI API character by name.
         
         Args:
-            instance_id: The ID of the instance to get. If None, returns the default instance.
+            character_name: The name of the character to get. If None, returns the default character.
         
         Returns:
-            An OpenAI_API instance, or None if no instance is available.
+            An OpenAI_API instance, or None if no character is available.
         """
-        if instance_id and instance_id in self.openai_instances:
-            return self.openai_instances[instance_id]
-        elif "default" in self.openai_instances:
-            return self.openai_instances["default"]
-        elif self.openai_instances:
-            # Return the first available instance
-            return next(iter(self.openai_instances.values()))
+        if character_name and character_name in self.openai_characters:
+            return self.openai_characters[character_name]
+        elif "default" in self.openai_characters:
+            return self.openai_characters["default"]
+        elif self.openai_characters:
+            # Return the first available character
+            return next(iter(self.openai_characters.values()))
         return None
     
-    def get_anthropic_instance(self, instance_id: Optional[str] = None) -> Optional[AnthropicAPI]:
+    def get_anthropic_character(self, character_name: Optional[str] = None) -> Optional[AnthropicAPI]:
         """
-        Get an Anthropic API instance by ID.
+        Get an Anthropic API character by name.
         
         Args:
-            instance_id: The ID of the instance to get. If None, returns the default instance.
+            character_name: The name of the character to get. If None, returns the default character.
         
         Returns:
-            An AnthropicAPI instance, or None if no instance is available.
+            An AnthropicAPI instance, or None if no character is available.
         """
-        if instance_id and instance_id in self.anthropic_instances:
-            return self.anthropic_instances[instance_id]
-        elif "default" in self.anthropic_instances:
-            return self.anthropic_instances["default"]
-        elif self.anthropic_instances:
-            # Return the first available instance
-            return next(iter(self.anthropic_instances.values()))
+        if character_name and character_name in self.anthropic_characters:
+            return self.anthropic_characters[character_name]
+        elif "default" in self.anthropic_characters:
+            return self.anthropic_characters["default"]
+        elif self.anthropic_characters:
+            # Return the first available character
+            return next(iter(self.anthropic_characters.values()))
         return None
     
-    def get_available_openai_instances(self) -> List[str]:
+    def get_available_openai_characters(self) -> List[str]:
         """
-        Get a list of available OpenAI instance IDs.
+        Get a list of available OpenAI character names.
         
         Returns:
-            A list of instance IDs.
+            A list of character names.
         """
-        return list(self.openai_instances.keys())
+        return list(self.openai_characters.keys())
     
-    def get_available_anthropic_instances(self) -> List[str]:
+    def get_available_anthropic_characters(self) -> List[str]:
         """
-        Get a list of available Anthropic instance IDs.
+        Get a list of available Anthropic character names.
         
         Returns:
-            A list of instance IDs.
+            A list of character names.
         """
-        return list(self.anthropic_instances.keys())
+        return list(self.anthropic_characters.keys())
     
     def generate_response(self, 
                          provider: str, 
-                         instance_id: Optional[str], 
+                         character_name: Optional[str], 
                          model: str, 
                          prompt: str, 
                          system_content: str) -> str:
         """
-        Generate a response using the specified provider and instance.
+        Generate a response using the specified provider and character.
         
         Args:
             provider: The provider to use ('openai' or 'anthropic')
-            instance_id: The instance ID to use, or None for default
+            character_name: The character name to use, or None for default
             model: The model to use
             prompt: The prompt to send
             system_content: The system content to send
@@ -113,26 +113,26 @@ class MultiInstanceManager:
             The generated response text
         
         Raises:
-            ValueError: If the provider or instance is invalid
+            ValueError: If the provider or character is invalid
         """
         if provider.lower() == 'openai':
-            instance = self.get_openai_instance(instance_id)
-            if not instance:
-                raise ValueError(f"No valid OpenAI instance found for ID: {instance_id}")
+            character = self.get_openai_character(character_name)
+            if not character:
+                raise ValueError(f"No valid OpenAI character found for name: {character_name}")
             
-            instance.set_model(model)
-            return instance.generate_response(prompt, system_content)
+            character.set_model(model)
+            return character.generate_response(prompt, system_content)
             
         elif provider.lower() == 'anthropic':
-            instance = self.get_anthropic_instance(instance_id)
-            if not instance:
-                raise ValueError(f"No valid Anthropic instance found for ID: {instance_id}")
+            character = self.get_anthropic_character(character_name)
+            if not character:
+                raise ValueError(f"No valid Anthropic character found for name: {character_name}")
             
-            instance.set_model(model)
-            return instance.generate_response(prompt, system_content)
+            character.set_model(model)
+            return character.generate_response(prompt, system_content)
             
         else:
             raise ValueError(f"Invalid provider: {provider}")
 
 # Create a singleton instance
-manager = MultiInstanceManager()
+manager = CharacterInstanceManager()

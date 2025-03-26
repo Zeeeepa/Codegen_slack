@@ -7,15 +7,15 @@ logger = logging.getLogger(__name__)
 
 def register_list_instances_command(app: App):
     """
-    Register the /list-instances command to show available API instances.
+    Register the /list-instances command to show available API characters.
     """
     @app.command("/list-instances")
     def handle_list_instances_command(ack: Ack, respond: Respond, client: WebClient):
         ack()
         
-        # Get available instances
-        openai_instances = manager.get_available_openai_instances()
-        anthropic_instances = manager.get_available_anthropic_instances()
+        # Get available characters
+        openai_characters = manager.get_available_openai_characters()
+        anthropic_characters = manager.get_available_anthropic_characters()
         
         # Build response blocks
         blocks = [
@@ -23,7 +23,7 @@ def register_list_instances_command(app: App):
                 "type": "header",
                 "text": {
                     "type": "plain_text",
-                    "text": "Available API Instances",
+                    "text": "Available API Characters",
                     "emoji": True
                 }
             },
@@ -32,22 +32,22 @@ def register_list_instances_command(app: App):
             }
         ]
         
-        # Add OpenAI instances
-        if openai_instances:
+        # Add OpenAI characters
+        if openai_characters:
             blocks.append({
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": "*OpenAI Instances:*"
+                    "text": "*OpenAI Characters:*"
                 }
             })
             
-            instance_text = "\n".join([f"• Instance ID: `{instance_id}`" for instance_id in openai_instances])
+            character_text = "\n".join([f"• Character: `{character_name}`" for character_name in openai_characters])
             blocks.append({
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": instance_text
+                    "text": character_text
                 }
             })
         else:
@@ -55,26 +55,26 @@ def register_list_instances_command(app: App):
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": "*OpenAI Instances:* None available"
+                    "text": "*OpenAI Characters:* None available"
                 }
             })
         
-        # Add Anthropic instances
-        if anthropic_instances:
+        # Add Anthropic characters
+        if anthropic_characters:
             blocks.append({
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": "*Anthropic Instances:*"
+                    "text": "*Anthropic Characters:*"
                 }
             })
             
-            instance_text = "\n".join([f"• Instance ID: `{instance_id}`" for instance_id in anthropic_instances])
+            character_text = "\n".join([f"• Character: `{character_name}`" for character_name in anthropic_characters])
             blocks.append({
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": instance_text
+                    "text": character_text
                 }
             })
         else:
@@ -82,7 +82,7 @@ def register_list_instances_command(app: App):
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": "*Anthropic Instances:* None available"
+                    "text": "*Anthropic Characters:* None available"
                 }
             })
         
@@ -94,7 +94,7 @@ def register_list_instances_command(app: App):
             "type": "section",
             "text": {
                 "type": "mrkdwn",
-                "text": "*Usage Instructions:*\nTo use a specific instance, add the `instance_id` parameter when using the chat commands. For example:\n`/chat-openai instance_id=1 model=gpt-4o Your prompt here`\n`/chat-anthropic instance_id=2 model=claude-3-opus-20240229 Your prompt here`"
+                "text": "*Usage Instructions:*\nTo use a specific character, add the `character` parameter when using the chat commands. For example:\n`/chat character=Sherlock model=gpt-4o Your prompt here`\n`/chat-anthropic character=Watson model=claude-3-opus-20240229 Your prompt here`"
             }
         })
         
