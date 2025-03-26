@@ -88,5 +88,4 @@ def ask_callback(client: WebClient, ack: Ack, command, say: Say, logger: Logger,
             
     except Exception as e:
         logger.error(e)
-        client.chat_postEphemeral(channel=channel_id, user=user_id, text=f"Received an error from Bolty:
-{e}")
+        client.chat_postEphemeral(channel=channel_id, user=user_id, text=f"Received an error from Bolty: {e}")
