@@ -36,6 +36,16 @@
                 "command": "/chat",
                 "description": "Start a thread-based conversation with the AI",
                 "should_escape": false
+            },
+            {
+                "command": "/summarize",
+                "description": "Generate a summary of recent channel messages",
+                "should_escape": false
+            },
+            {
+                "command": "/image",
+                "description": "Generate an image using DALL-E",
+                "should_escape": false
             }
         ]
     },
@@ -48,6 +58,7 @@
                 "chat:write",
                 "chat:write.public",
                 "commands",
+                "files:read",
                 "groups:history",
                 "groups:read",
                 "im:history",
@@ -105,6 +116,7 @@
             "bot_events": [
                 "app_home_opened",
                 "app_mention",
+                "file_shared",
                 "function_executed",
                 "message.channels",
                 "message.groups",
