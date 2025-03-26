@@ -8,6 +8,7 @@ This Slack chatbot app template offers a customizable solution for integrating A
 * Utilize a custom function for integration with Workflow Builder to summarize messages in conversations
 * Select your preferred API/model from the app home to customize the bot's responses
 * Bring Your Own Language Model [BYO LLM](#byo-llm) for customization
+* Support for [multiple API keys](#multi-instance) for OpenAI and Anthropic providers
 * Custom FileStateStore creates a file in /data per user to store API/model preferences
 
 Inspired by [ChatGPT-in-Slack](https://github.com/seratch/ChatGPT-in-Slack/tree/main)
@@ -51,6 +52,12 @@ ANTHROPIC_API_KEY=your-anthropic-key
 VERTEXAI_PROJECT_ID=your-project-id
 VERTEXAI_LOCATION=your-location
 VERTEXAI_MODEL=your-model
+
+# Multiple API Keys (if using multiple instances)
+OPENAI_API_KEY_1=your-first-openai-key
+OPENAI_API_KEY_2=your-second-openai-key
+ANTHROPIC_API_KEY_1=your-first-anthropic-key
+ANTHROPIC_API_KEY_2=your-second-anthropic-key
 ```
 
 See the `.env.example` file for a template.
@@ -100,6 +107,25 @@ Unlock the OpenAI models from your OpenAI account dashboard by clicking [create 
 export OPENAI_API_KEY=<your-api-key>
 ```
 
+<a name="multi-instance"></a>
+##### Multiple API Keys Setup
+
+To use multiple API keys for OpenAI and Anthropic, you can set up numbered environment variables:
+
+```zsh
+# OpenAI multiple keys
+export OPENAI_API_KEY_1=<your-first-api-key>
+export OPENAI_API_KEY_2=<your-second-api-key>
+# ... up to OPENAI_API_KEY_9
+
+# Anthropic multiple keys
+export ANTHROPIC_API_KEY_1=<your-first-anthropic-key>
+export ANTHROPIC_API_KEY_2=<your-second-anthropic-key>
+# ... up to ANTHROPIC_API_KEY_9
+```
+
+For more details on setting up and using multiple API keys, see [MULTI_INSTANCE_SETUP.md](./MULTI_INSTANCE_SETUP.md).
+
 ### Setup Your Local Project
 ```zsh
 # Clone this project onto your machine
@@ -147,6 +173,7 @@ Every incoming request is routed to a "listener". Inside this directory, we grou
 ### `/ai`
 
 * `ai_constants.py`: Defines constants used throughout the AI module.
+* `multi_instance_manager.py`: Manages multiple API key instances for OpenAI and Anthropic providers.
 
 <a name="byo-llm"></a>
 #### `ai/providers`

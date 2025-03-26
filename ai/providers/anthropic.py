@@ -2,6 +2,7 @@ from .base_provider import BaseAPIProvider
 import anthropic
 import os
 import logging
+from env_loader import get_api_keys
 
 logging.basicConfig(level=logging.ERROR)
 logger = logging.getLogger(__name__)
@@ -19,8 +20,42 @@ class AnthropicAPI(BaseAPIProvider):
         "claude-3-opus-20240229": {"name": "Claude 3 Opus", "provider": "Anthropic", "max_tokens": 4096},
     }
 
-    def __init__(self):
-        self.api_key = os.environ.get("ANTHROPIC_API_KEY")
+    def __init__(self, instance_id=None):
+        """
+        Initialize the Anthropic API provider.
+        
+        Args:
+            instance_id: Optional ID to specify which API key to use.
+                         If None, uses the default API key.
+        """
+        self.api_keys = get_api_keys("ANTHROPIC")
+        
+        if instance_id and instance_id in self.api_keys:
+            self.api_key = self.api_keys[instance_id]
+            self.instance_id = instance_id
+        elif "default" in self.api_keys:
+            self.api_key = self.api_keys["default"]
+            self.instance_id = "default"
+        else:
+            self.api_key = os.environ.get("ANTHROPIC_API_KEY")
+            self.instance_id = "default"
+        
+        # Initialize the client
+        if self.api_key:
+            self.client = anthropic.Anthropic(api_key=self.api_key)
+        else:
+            self.client = None
+            logger.warning(f"No API key found for Anthropic instance {instance_id}")
+
+    @classmethod
+    def get_available_instances(cls):
+        """
+        Get a list of available API key instances.
+        
+        Returns:
+            A list of instance IDs that can be used to initialize this provider.
+        """
+        return list(get_api_keys("ANTHROPIC").keys())
 
     def set_model(self, model_name: str):
         if model_name not in self.MODELS.keys():
@@ -35,7 +70,9 @@ class AnthropicAPI(BaseAPIProvider):
 
     def generate_response(self, prompt: str, system_content: str) -> str:
         try:
-            self.client = anthropic.Anthropic(api_key=self.api_key)
+            if not self.client:
+                raise ValueError(f"No valid API key for Anthropic instance {self.instance_id}")
+                
             response = self.client.messages.create(
                 model=self.current_model,
                 system=system_content,
