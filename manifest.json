@@ -21,6 +21,11 @@
                 "command": "/ask-bolty",
                 "description": "Interact with Bolty.",
                 "should_escape": false
+            },
+            {
+                "command": "/localai-settings",
+                "description": "Configure LocalAI compatible API settings (DeepInfra, etc.)",
+                "should_escape": false
             }
         ]
     },
