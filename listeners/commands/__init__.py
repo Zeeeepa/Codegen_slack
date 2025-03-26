@@ -5,6 +5,7 @@ from .preferences import preferences_callback, handle_preferences_submission
 from .thread_chat import thread_chat_callback
 from .summarize_command import summarize_callback
 from .image_command import image_callback
+from .list_instances import register_list_instances_command
 
 
 def register(app: App):
@@ -15,6 +16,9 @@ def register(app: App):
     app.command("/chat")(thread_chat_callback)
     app.command("/summarize")(summarize_callback)
     app.command("/image")(image_callback)
+    
+    # Register the list-instances command
+    register_list_instances_command(app)
     
     # Register view submissions
     app.view("localai_settings_modal")(handle_localai_settings_submission)

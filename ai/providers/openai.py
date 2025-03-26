@@ -2,6 +2,7 @@ import openai
 from .base_provider import BaseAPIProvider
 import os
 import logging
+from env_loader import get_api_keys
 
 logging.basicConfig(level=logging.ERROR)
 logger = logging.getLogger(__name__)
@@ -16,8 +17,42 @@ class OpenAI_API(BaseAPIProvider):
         "gpt-3.5-turbo-0125": {"name": "GPT-3.5 Turbo", "provider": "OpenAI", "max_tokens": 4096},
     }
 
-    def __init__(self):
-        self.api_key = os.environ.get("OPENAI_API_KEY")
+    def __init__(self, instance_id=None):
+        """
+        Initialize the OpenAI API provider.
+        
+        Args:
+            instance_id: Optional ID to specify which API key to use.
+                         If None, uses the default API key.
+        """
+        self.api_keys = get_api_keys("OPENAI")
+        
+        if instance_id and instance_id in self.api_keys:
+            self.api_key = self.api_keys[instance_id]
+            self.instance_id = instance_id
+        elif "default" in self.api_keys:
+            self.api_key = self.api_keys["default"]
+            self.instance_id = "default"
+        else:
+            self.api_key = os.environ.get("OPENAI_API_KEY")
+            self.instance_id = "default"
+        
+        # Initialize the client
+        if self.api_key:
+            self.client = openai.OpenAI(api_key=self.api_key)
+        else:
+            self.client = None
+            logger.warning(f"No API key found for OpenAI instance {instance_id}")
+
+    @classmethod
+    def get_available_instances(cls):
+        """
+        Get a list of available API key instances.
+        
+        Returns:
+            A list of instance IDs that can be used to initialize this provider.
+        """
+        return list(get_api_keys("OPENAI").keys())
 
     def set_model(self, model_name: str):
         if model_name not in self.MODELS.keys():
@@ -32,7 +67,9 @@ class OpenAI_API(BaseAPIProvider):
 
     def generate_response(self, prompt: str, system_content: str) -> str:
         try:
-            self.client = openai.OpenAI(api_key=self.api_key)
+            if not self.client:
+                raise ValueError(f"No valid API key for OpenAI instance {self.instance_id}")
+                
             response = self.client.chat.completions.create(
                 model=self.current_model,
                 n=1,
