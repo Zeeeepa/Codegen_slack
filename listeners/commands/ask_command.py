@@ -5,6 +5,7 @@ from ai.streaming import stream_response
 from slack_sdk import WebClient
 from state_store.conversation_memory import add_to_conversation_history, get_conversation_history
 from state_store.user_preferences import get_user_preferences, get_system_prompt
+import uuid
 
 """
 Callback for handling the 'ask-bolty' command. It acknowledges the command, retrieves the user's ID and prompt,
@@ -53,7 +54,7 @@ def ask_callback(client: WebClient, ack: Ack, command, say: Say, logger: Logger,
             # Use streaming response if not in ephemeral message
             ai_response = get_provider_response(user_id, prompt, conversation_context, system_content)
             
-            # Update the message with the response
+            # Update the message with the response and add interactive buttons
             client.chat_update(
                 channel=channel_id,
                 ts=response["ts"],
@@ -70,8 +71,29 @@ def ask_callback(client: WebClient, ack: Ack, command, say: Say, logger: Logger,
                                 "elements": [{"type": "text", "text": ai_response}],
                             },
                         ],
+                    },
+                    {
+                        "type": "actions",
+                        "elements": [
+                            {
+                                "type": "button",
+                                "text": {"type": "plain_text", "text": "🔄 Regenerate", "emoji": True},
+                                "action_id": f"regenerate_{uuid.uuid4()}",
+                                "style": "primary"
+                            },
+                            {
+                                "type": "button",
+                                "text": {"type": "plain_text", "text": "👍 Helpful", "emoji": True},
+                                "action_id": f"feedback_helpful_{uuid.uuid4()}"
+                            },
+                            {
+                                "type": "button",
+                                "text": {"type": "plain_text", "text": "👎 Not Helpful", "emoji": True},
+                                "action_id": f"feedback_not_helpful_{uuid.uuid4()}"
+                            }
+                        ]
                     }
-                ],
+                ]
             )
             
             # Add AI response to conversation history if memory is enabled
@@ -88,4 +110,8 @@ def ask_callback(client: WebClient, ack: Ack, command, say: Say, logger: Logger,
             
     except Exception as e:
         logger.error(e)
-        client.chat_postEphemeral(channel=channel_id, user=user_id, text=f"Received an error from Bolty: {e}")
+        client.chat_postEphemeral(
+            channel=channel_id, 
+            user=user_id, 
+            text=f"Received an error from Bolty: {e}"
+        )
