@@ -17,40 +17,40 @@ class OpenAI_API(BaseAPIProvider):
         "gpt-3.5-turbo-0125": {"name": "GPT-3.5 Turbo", "provider": "OpenAI", "max_tokens": 4096},
     }
 
-    def __init__(self, instance_id=None):
+    def __init__(self, character_name=None):
         """
         Initialize the OpenAI API provider.
         
         Args:
-            instance_id: Optional ID to specify which API key to use.
+            character_name: Optional character name to specify which API key to use.
                          If None, uses the default API key.
         """
         self.api_keys = get_api_keys("OPENAI")
         
-        if instance_id and instance_id in self.api_keys:
-            self.api_key = self.api_keys[instance_id]
-            self.instance_id = instance_id
+        if character_name and character_name in self.api_keys:
+            self.api_key = self.api_keys[character_name]
+            self.character_name = character_name
         elif "default" in self.api_keys:
             self.api_key = self.api_keys["default"]
-            self.instance_id = "default"
+            self.character_name = "default"
         else:
             self.api_key = os.environ.get("OPENAI_API_KEY")
-            self.instance_id = "default"
+            self.character_name = "default"
         
         # Initialize the client
         if self.api_key:
             self.client = openai.OpenAI(api_key=self.api_key)
         else:
             self.client = None
-            logger.warning(f"No API key found for OpenAI instance {instance_id}")
+            logger.warning(f"No API key found for OpenAI character '{character_name}'")
 
     @classmethod
-    def get_available_instances(cls):
+    def get_available_characters(cls):
         """
-        Get a list of available API key instances.
+        Get a list of available API key characters.
         
         Returns:
-            A list of instance IDs that can be used to initialize this provider.
+            A list of character names that can be used to initialize this provider.
         """
         return list(get_api_keys("OPENAI").keys())
 
@@ -68,7 +68,7 @@ class OpenAI_API(BaseAPIProvider):
     def generate_response(self, prompt: str, system_content: str) -> str:
         try:
             if not self.client:
-                raise ValueError(f"No valid API key for OpenAI instance {self.instance_id}")
+                raise ValueError(f"No valid API key for OpenAI character '{self.character_name}'")
                 
             response = self.client.chat.completions.create(
                 model=self.current_model,

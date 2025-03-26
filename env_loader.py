@@ -10,7 +10,7 @@ def load_environment_variables():
     """
     Load and normalize environment variables for the application.
     This ensures compatibility between different naming conventions.
-    Supports multiple API keys for different providers.
+    Supports character-based API instances.
     """
     # Load environment variables from .env file if it exists
     env_path = Path('.') / '.env'
@@ -20,33 +20,33 @@ def load_environment_variables():
     else:
         logger.warning("No .env file found. Using environment variables from the system.")
     
-    # Process multiple API keys for OpenAI
-    openai_keys = {}
+    # Process character-based API keys for OpenAI
+    openai_characters = {}
     for key, value in os.environ.items():
-        # Match OPENAI_API_KEY_1, OPENAI_API_KEY_2, etc.
-        match = re.match(r'OPENAI_API_KEY_(\d+)', key)
+        # Match OPENAI_CHARACTER_NAME, where NAME is the character name
+        match = re.match(r'OPENAI_CHARACTER_([A-Za-z0-9_]+)', key)
         if match:
-            instance_id = match.group(1)
-            openai_keys[instance_id] = value
+            character_name = match.group(1)
+            openai_characters[character_name] = value
     
     # Store the keys in a structured format
-    if openai_keys:
-        os.environ["OPENAI_API_KEYS"] = ",".join([f"{k}:{v}" for k, v in openai_keys.items()])
-        logger.info(f"Loaded {len(openai_keys)} OpenAI API keys")
+    if openai_characters:
+        os.environ["OPENAI_CHARACTER_KEYS"] = ",".join([f"{k}:{v}" for k, v in openai_characters.items()])
+        logger.info(f"Loaded {len(openai_characters)} OpenAI character API keys")
     
-    # Process multiple API keys for Anthropic
-    anthropic_keys = {}
+    # Process character-based API keys for Anthropic
+    anthropic_characters = {}
     for key, value in os.environ.items():
-        # Match ANTHROPIC_API_KEY_1, ANTHROPIC_API_KEY_2, etc.
-        match = re.match(r'ANTHROPIC_API_KEY_(\d+)', key)
+        # Match ANTHROPIC_CHARACTER_NAME, where NAME is the character name
+        match = re.match(r'ANTHROPIC_CHARACTER_([A-Za-z0-9_]+)', key)
         if match:
-            instance_id = match.group(1)
-            anthropic_keys[instance_id] = value
+            character_name = match.group(1)
+            anthropic_characters[character_name] = value
     
     # Store the keys in a structured format
-    if anthropic_keys:
-        os.environ["ANTHROPIC_API_KEYS"] = ",".join([f"{k}:{v}" for k, v in anthropic_keys.items()])
-        logger.info(f"Loaded {len(anthropic_keys)} Anthropic API keys")
+    if anthropic_characters:
+        os.environ["ANTHROPIC_CHARACTER_KEYS"] = ",".join([f"{k}:{v}" for k, v in anthropic_characters.items()])
+        logger.info(f"Loaded {len(anthropic_characters)} Anthropic character API keys")
     
     # Map OPENAI_* variables to LOCALAI_* variables if they don't exist
     if not os.environ.get("LOCALAI_API_KEY") and os.environ.get("OPENAI_API_KEY"):
@@ -73,12 +73,12 @@ def load_environment_variables():
     else:
         logger.warning("No API key found in environment variables")
     
-    # Log number of multiple API keys
-    if "OPENAI_API_KEYS" in os.environ:
-        logger.info(f"Multiple OpenAI API keys available: {len(openai_keys)}")
+    # Log number of character API keys
+    if "OPENAI_CHARACTER_KEYS" in os.environ:
+        logger.info(f"OpenAI character API keys available: {len(openai_characters)}")
     
-    if "ANTHROPIC_API_KEYS" in os.environ:
-        logger.info(f"Multiple Anthropic API keys available: {len(anthropic_keys)}")
+    if "ANTHROPIC_CHARACTER_KEYS" in os.environ:
+        logger.info(f"Anthropic character API keys available: {len(anthropic_characters)}")
 
 def get_api_keys(provider_name):
     """
@@ -88,16 +88,17 @@ def get_api_keys(provider_name):
         provider_name: The name of the provider (e.g., 'OPENAI', 'ANTHROPIC')
     
     Returns:
-        A dictionary of instance_id -> api_key pairs
+        A dictionary of character_name -> api_key pairs
     """
-    keys_env_var = f"{provider_name}_API_KEYS"
-    if keys_env_var in os.environ and os.environ[keys_env_var]:
-        keys_str = os.environ[keys_env_var]
+    # First check for character-based keys
+    character_keys_env_var = f"{provider_name}_CHARACTER_KEYS"
+    if character_keys_env_var in os.environ and os.environ[character_keys_env_var]:
+        keys_str = os.environ[character_keys_env_var]
         keys_dict = {}
         for key_pair in keys_str.split(","):
             if ":" in key_pair:
-                instance_id, api_key = key_pair.split(":", 1)
-                keys_dict[instance_id] = api_key
+                character_name, api_key = key_pair.split(":", 1)
+                keys_dict[character_name] = api_key
         return keys_dict
     
     # Fall back to the single API key if available

@@ -9,6 +9,7 @@ This Slack chatbot app template offers a customizable solution for integrating A
 * Select your preferred API/model from the app home to customize the bot's responses
 * Bring Your Own Language Model [BYO LLM](#byo-llm) for customization
 * Support for [multiple API keys](#multi-instance) for OpenAI and Anthropic providers
+* Support for [character-based API instances](#character-based) for creating different AI personas
 * Custom FileStateStore creates a file in /data per user to store API/model preferences
 
 Inspired by [ChatGPT-in-Slack](https://github.com/seratch/ChatGPT-in-Slack/tree/main)
@@ -58,6 +59,12 @@ OPENAI_API_KEY_1=your-first-openai-key
 OPENAI_API_KEY_2=your-second-openai-key
 ANTHROPIC_API_KEY_1=your-first-anthropic-key
 ANTHROPIC_API_KEY_2=your-second-anthropic-key
+
+# Character-based API Keys (if using character-based instances)
+OPENAI_CHARACTER_SHERLOCK=your-sherlock-openai-key
+OPENAI_CHARACTER_PROGRAMMER=your-programmer-openai-key
+ANTHROPIC_CHARACTER_WATSON=your-watson-anthropic-key
+ANTHROPIC_CHARACTER_CHEF=your-chef-anthropic-key
 ```
 
 See the `.env.example` file for a template.
@@ -126,6 +133,23 @@ export ANTHROPIC_API_KEY_2=<your-second-anthropic-key>
 
 For more details on setting up and using multiple API keys, see [MULTI_INSTANCE_SETUP.md](./MULTI_INSTANCE_SETUP.md).
 
+<a name="character-based"></a>
+##### Character-Based API Instances Setup
+
+To create character-based API instances with different personalities, you can set up named environment variables:
+
+```zsh
+# OpenAI character-based keys
+export OPENAI_CHARACTER_SHERLOCK=<your-sherlock-api-key>
+export OPENAI_CHARACTER_PROGRAMMER=<your-programmer-api-key>
+
+# Anthropic character-based keys
+export ANTHROPIC_CHARACTER_WATSON=<your-watson-api-key>
+export ANTHROPIC_CHARACTER_CHEF=<your-chef-api-key>
+```
+
+For more details on setting up and using character-based API instances, see [CHARACTER_SETUP.md](./CHARACTER_SETUP.md).
+
 ### Setup Your Local Project
 ```zsh
 # Clone this project onto your machine
@@ -173,7 +197,7 @@ Every incoming request is routed to a "listener". Inside this directory, we grou
 ### `/ai`
 
 * `ai_constants.py`: Defines constants used throughout the AI module.
-* `multi_instance_manager.py`: Manages multiple API key instances for OpenAI and Anthropic providers.
+* `multi_instance_manager.py`: Manages multiple API key instances and character-based instances for OpenAI and Anthropic providers.
 
 <a name="byo-llm"></a>
 #### `ai/providers`
