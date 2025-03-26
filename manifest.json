@@ -26,6 +26,16 @@
                 "command": "/localai-settings",
                 "description": "Configure LocalAI compatible API settings (DeepInfra, etc.)",
                 "should_escape": false
+            },
+            {
+                "command": "/ai-preferences",
+                "description": "Configure your AI interaction preferences",
+                "should_escape": false
+            },
+            {
+                "command": "/chat",
+                "description": "Start a thread-based conversation with the AI",
+                "should_escape": false
             }
         ]
     },
