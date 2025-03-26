@@ -12,7 +12,7 @@ This Slack chatbot app template offers a customizable solution for integrating A
 
 Inspired by [ChatGPT-in-Slack](https://github.com/seratch/ChatGPT-in-Slack/tree/main)
 
-Before getting started, make sure you have a development workspace where you have permissions to install apps. If you don’t have one setup, go ahead and [create one](https://slack.com/create).
+Before getting started, make sure you have a development workspace where you have permissions to install apps. If you don't have one setup, go ahead and [create one](https://slack.com/create).
 ## Installation
 
 #### Prerequisites
@@ -32,7 +32,30 @@ Before you can run the app, you'll need to store some environment variables.
 1. Open your apps configuration page from this list, click **OAuth & Permissions** in the left hand menu, then copy the Bot User OAuth Token. You will store this in your environment as `SLACK_BOT_TOKEN`.
 2. Click **Basic Information** from the left hand menu and follow the steps in the App-Level Tokens section to create an app-level token with the `connections:write` scope. Copy this token. You will store this in your environment as `SLACK_APP_TOKEN`.
 
-Next, set the gathered tokens as environment variables using the following commands:
+Next, set the gathered tokens as environment variables. You can either export them directly or create a `.env` file in the root directory of the project:
+
+```
+# .env file example
+SLACK_BOT_TOKEN=xoxb-your-bot-token
+SLACK_APP_TOKEN=xapp-your-app-token
+
+# OpenAI Configuration (if using OpenAI)
+OPENAI_API_KEY=your-api-key
+OPENAI_BASE_URL=https://api.openai.com/v1  # or your custom endpoint
+OPENAI_MODEL=gpt-3.5-turbo  # or your preferred model
+
+# Anthropic Configuration (if using Anthropic)
+ANTHROPIC_API_KEY=your-anthropic-key
+
+# VertexAI Configuration (if using VertexAI)
+VERTEXAI_PROJECT_ID=your-project-id
+VERTEXAI_LOCATION=your-location
+VERTEXAI_MODEL=your-model
+```
+
+See the `.env.example` file for a template.
+
+You can also set these as environment variables using the following commands:
 
 ```zsh
 # MacOS/Linux
