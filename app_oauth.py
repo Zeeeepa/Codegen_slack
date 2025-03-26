@@ -8,6 +8,10 @@ from slack_sdk.oauth.installation_store import FileInstallationStore
 from slack_sdk.oauth.state_store import FileOAuthStateStore
 
 from listeners import register_listeners
+from env_loader import load_environment_variables
+
+# Load and normalize environment variables
+load_environment_variables()
 
 logging.basicConfig(level=logging.DEBUG)
 

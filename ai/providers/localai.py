@@ -36,13 +36,22 @@ class LocalAI_API(BaseAPIProvider):
             "provider": "DeepInfra",
             "max_tokens": 4096
         },
+        "deepseek-ai/DeepSeek-R1": {
+            "name": "DeepSeek R1",
+            "provider": "DeepInfra",
+            "max_tokens": 4096
+        },
         # Add more models as needed
     }
 
     def __init__(self):
         # Get API key and base URL from environment variables
-        self.api_key = os.environ.get("LOCALAI_API_KEY", "")
-        self.base_url = os.environ.get("LOCALAI_API_URL", "https://api.deepinfra.com/v1/openai")
+        # First check LOCALAI_* variables, then fall back to OPENAI_* variables
+        self.api_key = os.environ.get("LOCALAI_API_KEY", os.environ.get("OPENAI_API_KEY", ""))
+        self.base_url = os.environ.get("LOCALAI_API_URL", os.environ.get("OPENAI_BASE_URL", "https://api.deepinfra.com/v1/openai"))
+        
+        # Set default model from environment if available
+        self.default_model = os.environ.get("LOCALAI_MODEL", os.environ.get("OPENAI_MODEL", ""))
         
         # Load custom models from environment if available
         self._load_custom_models()
@@ -73,6 +82,14 @@ class LocalAI_API(BaseAPIProvider):
 
     def get_models(self) -> dict:
         if self.api_key:
+            # If we have a default model from environment, ensure it's in the models list
+            if self.default_model and self.default_model not in self.MODELS:
+                # Add the default model if it's not already in the list
+                self.MODELS[self.default_model] = {
+                    "name": self.default_model.split("/")[-1],
+                    "provider": "DeepInfra",
+                    "max_tokens": 4096
+                }
             return self.MODELS
         else:
             return {}
