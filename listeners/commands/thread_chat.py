@@ -1,4 +1,5 @@
 import logging
+from logging import Logger
 from slack_bolt import Ack, Say, BoltContext
 from slack_sdk import WebClient
 from ai.providers import get_provider_response
