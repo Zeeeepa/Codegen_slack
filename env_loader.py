@@ -1,5 +1,7 @@
 import os
 import logging
+from dotenv import load_dotenv
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -8,6 +10,14 @@ def load_environment_variables():
     Load and normalize environment variables for the application.
     This ensures compatibility between different naming conventions.
     """
+    # Load environment variables from .env file if it exists
+    env_path = Path('.') / '.env'
+    if env_path.exists():
+        logger.info(f"Loading environment variables from {env_path}")
+        load_dotenv(dotenv_path=env_path)
+    else:
+        logger.warning("No .env file found. Using environment variables from the system.")
+    
     # Map OPENAI_* variables to LOCALAI_* variables if they don't exist
     if not os.environ.get("LOCALAI_API_KEY") and os.environ.get("OPENAI_API_KEY"):
         os.environ["LOCALAI_API_KEY"] = os.environ.get("OPENAI_API_KEY")
