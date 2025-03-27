@@ -9,6 +9,7 @@ from .list_instances import register_list_instances_command
 
 from .review_pr_command import register as register_review_pr_command
 from .agent_commands import register as register_agent_commands
+from .langchain_commands import register_langchain_commands
 
 
 def register(app: App):
@@ -28,6 +29,9 @@ def register(app: App):
     
     # Register agent commands
     register_agent_commands(app)
+    
+    # Register LangChain and Codegen commands
+    register_langchain_commands(app)
     
     # Register view submissions
     app.view("localai_settings_modal")(handle_localai_settings_submission)
