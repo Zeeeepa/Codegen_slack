@@ -8,6 +8,7 @@ from .image_command import image_callback
 from .list_instances import register_list_instances_command
 
 from .review_pr_command import register as register_review_pr_command
+from .ask_pr_question_command import register as register_ask_pr_question_command
 
 
 def register(app: App):
@@ -24,6 +25,9 @@ def register(app: App):
     
     # Register the review-pr command
     register_review_pr_command(app)
+    
+    # Register the ask-pr-question command
+    register_ask_pr_question_command(app)
     
     # Register view submissions
     app.view("localai_settings_modal")(handle_localai_settings_submission)

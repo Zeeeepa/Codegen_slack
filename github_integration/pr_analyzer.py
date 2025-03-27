@@ -1,4 +1,3 @@
-
 """
 PR analyzer for GitHub PR review agent.
 """
@@ -9,9 +8,25 @@ import base64
 from typing import Dict, List, Any, Optional, Tuple
 import anthropic
 import openai
+import requests
 from github_integration.github_api import get_pr_details, get_pr_files
+from github_integration.deep_code_research import DeepCodeResearcher
 
 logger = logging.getLogger(__name__)
+
+GITHUB_API_BASE = "https://api.github.com"
+
+def get_github_token():
+    """
+    Get the GitHub token from environment variables.
+    
+    Returns:
+        str: The GitHub token
+    """
+    token = os.environ.get("GITHUB_TOKEN")
+    if not token:
+        raise ValueError("GITHUB_TOKEN environment variable not set")
+    return token
 
 def get_file_content(repo_name: str, file_path: str, ref: str) -> str:
     """
@@ -209,24 +224,36 @@ Provide your analysis in the following format:
 [Brief summary of your review and the most important improvements]
 """
     
-    # Use the character instance manager to generate a response
+    # Use OpenAI or Anthropic to generate a response
     try:
         # Try OpenAI first
-        character = manager.get_openai_character()
-        if character:
-            model = "gpt-4o"
-            system_content = "You are an expert code reviewer. Always provide specific, actionable suggestions for improvement, even if the code looks good."
-            return character.generate_response(prompt, system_content)
+        openai_api_key = os.environ.get("OPENAI_API_KEY")
+        if openai_api_key:
+            client = openai.OpenAI(api_key=openai_api_key)
+            response = client.chat.completions.create(
+                model="gpt-4o",
+                messages=[
+                    {"role": "system", "content": "You are an expert code reviewer. Always provide specific, actionable suggestions for improvement, even if the code looks good."},
+                    {"role": "user", "content": prompt}
+                ]
+            )
+            return response.choices[0].message.content
     except Exception as e:
         logger.warning(f"Error using OpenAI for code analysis: {str(e)}")
     
     try:
         # Fall back to Anthropic
-        character = manager.get_anthropic_character()
-        if character:
-            model = "claude-3-opus-20240229"
-            system_content = "You are an expert code reviewer. Always provide specific, actionable suggestions for improvement, even if the code looks good."
-            return character.generate_response(prompt, system_content)
+        anthropic_api_key = os.environ.get("ANTHROPIC_API_KEY")
+        if anthropic_api_key:
+            client = anthropic.Anthropic(api_key=anthropic_api_key)
+            response = client.messages.create(
+                model="claude-3-opus-20240229",
+                system="You are an expert code reviewer. Always provide specific, actionable suggestions for improvement, even if the code looks good.",
+                messages=[
+                    {"role": "user", "content": prompt}
+                ]
+            )
+            return response.content[0].text
     except Exception as e:
         logger.warning(f"Error using Anthropic for code analysis: {str(e)}")
     
@@ -248,12 +275,17 @@ def analyze_pr(repo_name: str, pr_number: int, pr_title: str, pr_url: str) -> No
         # Get PR details
         pr_details = get_pr_details(repo_name, pr_number)
         pr_head_sha = pr_details["head"]["sha"]
+        pr_description = pr_details.get("body", "")
         
         # Get PR files
         pr_files = get_pr_files(repo_name, pr_number)
         
         # Get PR diff
         pr_diff = get_pr_diff(repo_name, pr_number)
+        
+        # Initialize deep code researcher
+        deep_researcher = DeepCodeResearcher(repo_name, pr_number)
+        deep_research_successful = deep_researcher.initialize()
         
         # Analyze each file
         file_analyses = []
@@ -291,6 +323,16 @@ def analyze_pr(repo_name: str, pr_number: int, pr_title: str, pr_url: str) -> No
         for file_path, analysis in file_analyses:
             summary += f"## File: {file_path}\n\n"
             summary += analysis.strip() + "\n\n"
+        
+        # Add deep code research insights if available
+        if deep_research_successful:
+            try:
+                deep_insights = deep_researcher.research_pr_changes(pr_files, pr_description)
+                summary += "\n\n## Deep Code Research Insights\n\n"
+                summary += deep_insights.strip() + "\n\n"
+                logger.info("Added deep code research insights to PR review")
+            except Exception as e:
+                logger.error(f"Error getting deep code research insights: {str(e)}")
         
         summary += "\nThis review was generated automatically by the PR Review Agent. If you have any questions or need clarification, please let me know!"
         
@@ -336,4 +378,3 @@ def get_slack_app():
         logger.error(f"Error getting Slack app: {str(e)}")
     
     return None
-
