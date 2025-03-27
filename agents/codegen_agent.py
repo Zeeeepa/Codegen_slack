@@ -45,7 +45,8 @@ class CodegenAgent(BaseAgent):
         """
         try:
             logger.info(f"Initializing CodegenApp for repo: {self.repo}")
-            self.cg_app = CodegenApp(name="bolt-codegen", repo=self.repo)
+            # Explicitly set commit to "main" instead of the default "latest"
+            self.cg_app = CodegenApp(name="bolt-codegen", repo=self.repo, commit="main")
             logger.info("CodegenApp initialized successfully")
             print(f"CodegenApp initialized for repo: {self.repo}")
             sys.stdout.flush()
@@ -123,7 +124,7 @@ class CodegenAgent(BaseAgent):
                 self.parsing_status = "not_started"
                 self.parsing_error = None
                 
-                # Re-initialize CodegenApp
+                # Re-initialize CodegenApp with the correct branch
                 self._initialize_codegen_app()
                 
                 # Start parsing again

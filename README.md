@@ -47,6 +47,9 @@ Bolt-Chat is a Slack chatbot powered by AI models from Anthropic and OpenAI, wit
    OPENAI_API_KEY=your-openai-api-key
    ANTHROPIC_API_KEY=your-anthropic-api-key
    CODEGEN_DEFAULT_REPO=your-default-repo
+   GITHUB_ACCESS_TOKEN=your-github-token
+   CODEGEN_MODEL_PROVIDER=anthropic  # or openai
+   CODEGEN_MODEL_NAME=claude-3-sonnet-20240229  # or gpt-4-turbo
    ```
 
 ### Running the Application
@@ -86,6 +89,10 @@ If you encounter a "Repository has not been parsed" error, you can:
 3. Ask the agent to "retry parsing" if the parsing has failed
 4. Check the logs for more detailed error information
 
+#### Common Error: "Repository has not been parsed"
+
+This error often occurs when the Codegen library tries to fetch a non-existent branch. The agent is configured to use the "main" branch by default. If your repository uses a different default branch, you can modify the `codegen_agent.py` file to specify the correct branch name.
+
 ## Slack Commands
 
 The following Slack commands are available:
@@ -111,6 +118,7 @@ If you encounter issues with repository parsing:
 3. Use the `/parsing-status` command to check the current parsing status
 4. Check the logs for any error messages
 5. Ask the agent to "retry parsing" if the parsing has failed
+6. Ensure your GitHub access token is valid and has the necessary permissions
 
 ### Slack App Not Responding
 
