@@ -16,6 +16,8 @@ The PR Review Agent is a feature that automatically analyzes GitHub pull request
 - Support for multiple repositories
 - Slack notifications for PR reviews
 - Manual review triggering via Slack command
+- **Deep code research** for understanding code in its broader context
+- **Q&A capability** to ask specific questions about the code in a PR
 
 ## Setup
 
@@ -24,7 +26,6 @@ The PR Review Agent is a feature that automatically analyzes GitHub pull request
 The PR Review Agent requires the following environment variables:
 
 ```
-
 # GitHub Configuration
 GITHUB_TOKEN=your-github-token
 GITHUB_WEBHOOK_SECRET=your-webhook-secret
@@ -53,7 +54,6 @@ PR_REVIEW_SLACK_CHANNEL=#github-reviews  # Optional, defaults to #general
 
 ### Automatic PR Reviews
 
-
 Once set up, the PR Review Agent will automatically analyze PRs when they are:
 - Opened for the first time
 - Updated with new commits
@@ -68,12 +68,38 @@ You can manually trigger a PR review using the `/review-pr` command in Slack:
 /review-pr https://github.com/owner/repo/pull/123
 ```
 
-
 Or using the shorter format:
 
 ```
 /review-pr owner/repo#123
 ```
+
+### Asking Questions About PR Code
+
+You can ask specific questions about the code in a PR using the `/ask-pr-question` command in Slack:
+
+```
+/ask-pr-question https://github.com/owner/repo/pull/123 How does this code handle error cases?
+```
+
+Or using the shorter format:
+
+```
+/ask-pr-question owner/repo#123 What's the purpose of the new function?
+```
+
+The agent will analyze the PR code and provide a detailed answer to your question based on deep code research.
+
+## Deep Code Research
+
+The PR Review Agent uses Codegen's deep code research capabilities to analyze the code in its broader context. This allows it to:
+
+1. Understand the relationships between different parts of the codebase
+2. Identify potential issues that might not be apparent from looking at individual files
+3. Suggest improvements based on patterns and best practices in the rest of the codebase
+4. Explain how the changes impact the overall system
+
+This deep understanding of the code enables the agent to provide more insightful and contextual feedback than traditional code review tools.
 
 ## Customization
 
@@ -92,7 +118,6 @@ You can customize the Slack channel for PR review notifications by setting the `
 ## Troubleshooting
 
 ### Webhook Issues
-
 
 If webhooks aren't being received:
 1. Check that the webhook is properly configured in GitHub
