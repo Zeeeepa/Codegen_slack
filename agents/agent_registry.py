@@ -11,6 +11,7 @@ from agents.pr_reviewer_agent import PRReviewerAgent
 from agents.researcher_agent import ResearcherAgent
 from agents.planner_agent import PlannerAgent
 from agents.code_applicator_agent import CodeApplicatorAgent
+from agents.codegen_agent import CodegenAgent
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +38,9 @@ class AgentRegistry:
         
         # Register Code Applicator agent
         AgentFactory.register_agent_type("code_applicator", CodeApplicatorAgent)
+        
+        # Register Codegen agent
+        AgentFactory.register_agent_type("codegen", CodegenAgent)
         
         logger.info("Registered default agent types")
     
