@@ -6,6 +6,7 @@ from slack_bolt.adapter.socket_mode import SocketModeHandler
 
 from listeners import register_listeners
 from env_loader import load_environment_variables
+from github_integration import register_webhook_handler
 
 # Load and normalize environment variables
 load_environment_variables()
@@ -16,6 +17,9 @@ logging.basicConfig(level=logging.DEBUG)
 
 # Register Listeners
 register_listeners(app)
+
+# Register GitHub webhook handler
+register_webhook_handler(app)
 
 # Start Bolt app
 if __name__ == "__main__":
