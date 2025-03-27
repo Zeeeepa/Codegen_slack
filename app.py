@@ -20,7 +20,7 @@ app = App(token=os.environ.get("SLACK_BOT_TOKEN"))
 logging.basicConfig(level=logging.DEBUG)
 
 # Create FastAPI app
-fastapi_app = FastAPI(title="PR Review Agent")
+fastapi_app = FastAPI(title="Bolt Chat with Codegen")
 
 # Register Listeners
 register_listeners(app)
@@ -37,6 +37,11 @@ def start_bolt_app():
 
 # Start Bolt app
 if __name__ == "__main__":
+    # Log startup message
+    logger = logging.getLogger(__name__)
+    logger.info("Starting Bolt Chat with Codegen integration")
+    logger.info(f"Available agent types: {AgentRegistry.get_agent_types()}")
+    
     # Start Bolt app in a separate thread
     bolt_thread = Thread(target=start_bolt_app)
     bolt_thread.daemon = True
