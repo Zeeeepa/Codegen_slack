@@ -1,123 +1,131 @@
-import logging
+
+"""
+GitHub webhook handler for PR review agent.
+"""
+
 import json
+import logging
+import os
 import hmac
 import hashlib
-import os
-from typing import Dict, Any, Optional
-from slack_bolt import App
-from fastapi import FastAPI, Request, HTTPException, Depends, Header
-from .pr_analyzer import analyze_pr
+from slack_bolt import App, BoltRequest, BoltResponse
+from github_integration.pr_analyzer import analyze_pull_request
+from github_integration.github_api import post_pr_comment, get_pr_details
+from github_integration.slack_notifier import notify_pr_analyzed, notify_error
+from github_integration.config import should_monitor_repo
 
 logger = logging.getLogger(__name__)
 
-# GitHub webhook events we're interested in
-PR_EVENTS = ["pull_request.opened", "pull_request.synchronize", "pull_request.reopened"]
-
-def verify_github_signature(payload_body: bytes, signature_header: str) -> bool:
+def register_webhook_handler(app: App):
     """
-    Verify that the webhook payload was sent from GitHub by validating the signature.
+    Register the GitHub webhook handler with the Bolt app.
     
     Args:
-        payload_body: The request body
-        signature_header: The GitHub signature header
-        
-    Returns:
-        True if the signature is valid, False otherwise
+        app: The Bolt app instance
     """
-    if not signature_header:
-        return False
+    @app.route("/github/webhook", methods=["POST"])
+    def handle_github_webhook(req: BoltRequest) -> BoltResponse:
+        # Verify webhook signature if a secret is configured
+        if not verify_webhook_signature(req):
+            logger.error("Invalid webhook signature")
+            return BoltResponse(status=401, body=json.dumps({"error": "Invalid signature"}))
         
+        # Parse the webhook payload
+        try:
+            payload = json.loads(req.body)
+        except json.JSONDecodeError:
+            logger.error("Failed to parse webhook payload")
+            return BoltResponse(status=400, body=json.dumps({"error": "Invalid JSON payload"}))
+        
+        # Check if this is a pull request event
+        if req.headers.get("X-GitHub-Event") == "pull_request":
+            return handle_pull_request_event(payload)
+        
+        # Return a 200 response for other events
+        return BoltResponse(status=200, body=json.dumps({"message": "Event received but not processed"}))
+
+def verify_webhook_signature(req: BoltRequest) -> bool:
+    """
+    Verify the GitHub webhook signature.
+    
+    Args:
+        req: The Bolt request
+    
+    Returns:
+        bool: True if the signature is valid, False otherwise
+    """
     webhook_secret = os.environ.get("GITHUB_WEBHOOK_SECRET")
     if not webhook_secret:
-        logger.warning("GITHUB_WEBHOOK_SECRET not set, skipping signature verification")
+        # If no secret is configured, skip verification
         return True
-        
-    signature_parts = signature_header.split('=')
-    if len(signature_parts) != 2:
-        return False
-        
-    algorithm, signature = signature_parts
-    if algorithm != 'sha256':
-        return False
-        
-    mac = hmac.new(webhook_secret.encode(), msg=payload_body, digestmod=hashlib.sha256)
-    expected_signature = mac.hexdigest()
     
-    return hmac.compare_digest(signature, expected_signature)
+    signature_header = req.headers.get("X-Hub-Signature-256")
+    if not signature_header:
+        return False
+    
+    # Calculate the expected signature
+    expected_signature = "sha256=" + hmac.new(
+        webhook_secret.encode("utf-8"),
+        req.body.encode("utf-8"),
+        hashlib.sha256
+    ).hexdigest()
+    
+    # Compare signatures using a constant-time comparison
+    return hmac.compare_digest(signature_header, expected_signature)
 
-async def process_github_webhook(request: Request, x_github_event: Optional[str] = Header(None), x_hub_signature_256: Optional[str] = Header(None)):
+def handle_pull_request_event(payload):
     """
-    Process a GitHub webhook event.
+    Handle a pull request event from GitHub.
     
     Args:
-        request: The FastAPI request
-        x_github_event: The GitHub event type
-        x_hub_signature_256: The GitHub signature header
+        payload: The webhook payload
+    
+    Returns:
+        BoltResponse: The response to send back to GitHub
     """
-    # Get the request body
-    payload_body = await request.body()
-    
-    # Verify the signature
-    if not verify_github_signature(payload_body, x_hub_signature_256):
-        raise HTTPException(status_code=401, detail="Invalid signature")
-    
-    # Parse the payload
-    try:
-        payload = json.loads(payload_body)
-    except json.JSONDecodeError:
-        raise HTTPException(status_code=400, detail="Invalid JSON payload")
-    
-    # Check if this is a PR event we're interested in
-    event_type = x_github_event
-    if not event_type:
-        raise HTTPException(status_code=400, detail="Missing X-GitHub-Event header")
-    
-    # Get the action from the payload
+    # Extract PR information
     action = payload.get("action")
-    if not action:
-        raise HTTPException(status_code=400, detail="Missing action in payload")
+    pr = payload.get("pull_request", {})
+    repo = payload.get("repository", {})
     
-    # Combine event and action
-    event_action = f"{event_type}.{action}"
+    # Only process opened or synchronize (updated) events
+    if action not in ["opened", "synchronize"]:
+        return BoltResponse(status=200, body=json.dumps({"message": f"PR {action} event ignored"}))
     
-    # Process PR events
-    if event_type == "pull_request" and event_action in PR_EVENTS:
-        logger.info(f"Processing PR event: {event_action}")
-        
-        # Extract PR information
-        pr_number = payload.get("number")
-        repo_name = payload.get("repository", {}).get("full_name")
-        pr_title = payload.get("pull_request", {}).get("title")
-        pr_url = payload.get("pull_request", {}).get("html_url")
-        
-        if not all([pr_number, repo_name, pr_title, pr_url]):
-            logger.error("Missing required PR information in payload")
-            raise HTTPException(status_code=400, detail="Missing required PR information")
-        
+    pr_number = pr.get("number")
+    repo_name = repo.get("full_name")
+    
+    if not pr_number or not repo_name:
+        logger.error("Missing PR number or repo name in webhook payload")
+        return BoltResponse(status=400, body=json.dumps({"error": "Missing PR information"}))
+    
+    # Check if we should monitor this repository
+    if not should_monitor_repo(repo_name):
+        logger.info(f"Ignoring PR #{pr_number} in {repo_name} (not in monitored repositories)")
+        return BoltResponse(status=200, body=json.dumps({"message": "Repository not monitored"}))
+    
+    logger.info(f"Processing PR #{pr_number} in {repo_name}")
+    
+    try:
         # Analyze the PR
-        try:
-            analyze_pr(repo_name, pr_number, pr_title, pr_url)
-        except Exception as e:
-            logger.error(f"Error analyzing PR: {str(e)}")
-            raise HTTPException(status_code=500, detail=f"Error analyzing PR: {str(e)}")
+        analysis_result = analyze_pull_request(repo_name, pr_number)
         
-        return {"status": "success", "message": f"Processing PR #{pr_number} from {repo_name}"}
-    
-    # Ignore other events
-    return {"status": "ignored", "message": f"Ignoring event: {event_action}"}
-
-def register_webhook_handler(app: App, fastapi_app: FastAPI):
-    """
-    Register the GitHub webhook handler with the FastAPI app.
-    
-    Args:
-        app: The Slack Bolt app
-        fastapi_app: The FastAPI app
-    """
-    # Store the Slack app in the FastAPI app state
-    fastapi_app.state.slack_app = app
-    
-    # Register the webhook endpoint
-    fastapi_app.post("/github/webhook")(process_github_webhook)
-    
-    logger.info("Registered GitHub webhook handler")
+        # Post the analysis as a comment on the PR
+        if analysis_result:
+            post_pr_comment(repo_name, pr_number, analysis_result)
+            logger.info(f"Posted analysis for PR #{pr_number} in {repo_name}")
+            
+            # Send a notification to Slack
+            pr_details = get_pr_details(repo_name, pr_number)
+            pr_title = pr_details.get("title", "")
+            pr_url = pr_details.get("html_url", "")
+            notify_pr_analyzed(repo_name, pr_number, pr_title, pr_url)
+        
+        return BoltResponse(status=200, body=json.dumps({"message": "PR analyzed successfully"}))
+    except Exception as e:
+        logger.error(f"Error processing PR: {str(e)}")
+        
+        # Send an error notification to Slack
+        notify_error(repo_name, pr_number, str(e))
+        
+        return BoltResponse(status=500, body=json.dumps({"error": f"Error processing PR: {str(e)}"}))

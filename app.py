@@ -25,10 +25,11 @@ fastapi_app = FastAPI(title="PR Review Agent")
 register_listeners(app)
 
 # Register GitHub webhook handler
-register_webhook_handler(app, fastapi_app)
 
-# Start Bolt app in Socket Mode
-def start_bolt_app():
+register_webhook_handler(app)
+
+# Start Bolt app
+if __name__ == "__main__":
     SocketModeHandler(app, os.environ.get("SLACK_APP_TOKEN")).start()
 
 # Start both servers

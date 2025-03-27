@@ -1,14 +1,21 @@
 # PR Review Agent
 
-The PR Review Agent is a powerful tool that automatically analyzes GitHub pull requests and provides detailed improvement suggestions. It uses AI to analyze code and always finds ways to make your code better, even if it already looks good.
+This document explains how to set up and use the PR Review Agent in the Bolt Chat application.
+
+## Overview
+
+The PR Review Agent is a feature that automatically analyzes GitHub pull requests and provides constructive feedback and improvement suggestions. It can be triggered in two ways:
+
+1. **Automatically via GitHub webhooks**: When a PR is opened or updated in a monitored repository
+2. **Manually via Slack command**: Using the `/review-pr` command in Slack
 
 ## Features
 
-- **Automatic PR Analysis**: Listens for GitHub webhook events and automatically analyzes PRs when they're created or updated
-- **Manual Review Triggering**: Use the `/review-pr` command in Slack to manually trigger a review
-- **AI-Powered Analysis**: Uses OpenAI or Anthropic to analyze code and provide detailed feedback
-- **Multi-Repository Support**: Can monitor PRs from any number of repositories
-- **Slack Notifications**: Sends notifications to Slack when PR reviews are completed
+- Automatic code analysis of PRs
+- Detailed feedback on code quality, best practices, and potential issues
+- Support for multiple repositories
+- Slack notifications for PR reviews
+- Manual review triggering via Slack command
 
 ## Setup
 
@@ -17,122 +24,90 @@ The PR Review Agent is a powerful tool that automatically analyzes GitHub pull r
 The PR Review Agent requires the following environment variables:
 
 ```
-# GitHub API Token (with repo scope)
-GITHUB_TOKEN=your_github_token
 
-# GitHub Webhook Secret (for verifying webhook payloads)
-GITHUB_WEBHOOK_SECRET=your_webhook_secret
+# GitHub Configuration
+GITHUB_TOKEN=your-github-token
+GITHUB_WEBHOOK_SECRET=your-webhook-secret
+PR_REVIEW_REPOS=owner/repo1,owner/repo2  # Optional, comma-separated list of repos to monitor
 
-# Slack Bot Token
-SLACK_BOT_TOKEN=your_slack_bot_token
+# AI Provider Configuration
+PR_REVIEW_AI_PROVIDER=openai  # or anthropic
+PR_REVIEW_OPENAI_MODEL=gpt-4  # Optional, defaults to gpt-4
+PR_REVIEW_ANTHROPIC_MODEL=claude-3-opus-20240229  # Optional, defaults to claude-3-opus-20240229
 
-# Slack App Token
-SLACK_APP_TOKEN=your_slack_app_token
-
-# Slack Notification Channel (optional, defaults to "general")
-SLACK_NOTIFICATION_CHANNEL=your_slack_channel_id
-
-# OpenAI API Key (for code analysis)
-OPENAI_API_KEY=your_openai_api_key
-
-# Anthropic API Key (fallback for code analysis)
-ANTHROPIC_API_KEY=your_anthropic_api_key
-
-# Port for the webhook server (optional, defaults to 3000)
-PORT=3000
+# Slack Configuration
+PR_REVIEW_SLACK_CHANNEL=#github-reviews  # Optional, defaults to #general
 ```
-
-You can also use character-based API keys as described in the [CHARACTER_SETUP.md](CHARACTER_SETUP.md) file.
 
 ### GitHub Webhook Setup
 
-1. Go to your GitHub repository settings
-2. Click on "Webhooks" in the left sidebar
-3. Click "Add webhook"
-4. Set the Payload URL to `https://your-server-url/github/webhook`
-5. Set the Content type to `application/json`
-6. Set the Secret to the same value as your `GITHUB_WEBHOOK_SECRET` environment variable
-7. Select "Let me select individual events" and check "Pull requests"
-8. Click "Add webhook"
-
-Repeat these steps for each repository you want to monitor.
-
-### Slack Command Setup
-
-1. Go to your Slack App settings at https://api.slack.com/apps
-2. Click on your app
-3. Click on "Slash Commands" in the left sidebar
-4. Click "Create New Command"
-5. Set the Command to `/review-pr`
-6. Set the Request URL to `https://your-server-url/slack/events`
-7. Set the Short Description to "Review a GitHub pull request"
-8. Set the Usage Hint to "[repo_owner/repo_name PR_number] or [PR_URL]"
-9. Click "Save"
+1. Go to your GitHub repository or organization settings
+2. Navigate to "Webhooks" and click "Add webhook"
+3. Set the Payload URL to `https://your-bolt-app-url/github/webhook`
+4. Set the Content type to `application/json`
+5. Set the Secret to the same value as your `GITHUB_WEBHOOK_SECRET` environment variable
+6. Select "Let me select individual events" and check "Pull requests"
+7. Click "Add webhook"
 
 ## Usage
 
 ### Automatic PR Reviews
 
-Once set up, the PR Review Agent will automatically analyze pull requests when they are:
 
-- Opened
-- Updated (new commits pushed)
-- Reopened
+Once set up, the PR Review Agent will automatically analyze PRs when they are:
+- Opened for the first time
+- Updated with new commits
 
-The agent will post a review comment on the PR with detailed improvement suggestions.
+The agent will post its analysis as a comment on the PR and send a notification to the configured Slack channel.
 
 ### Manual PR Reviews
 
-You can also manually trigger a PR review using the `/review-pr` Slack command:
+You can manually trigger a PR review using the `/review-pr` command in Slack:
 
 ```
 /review-pr https://github.com/owner/repo/pull/123
 ```
 
-Or:
+
+Or using the shorter format:
 
 ```
-/review-pr owner/repo 123
+/review-pr owner/repo#123
 ```
-
-## How It Works
-
-1. The PR Review Agent receives a webhook event from GitHub when a PR is opened, updated, or reopened
-2. It fetches the PR details, including the files changed and the diff
-3. It analyzes each file using AI (OpenAI or Anthropic) to find improvement suggestions
-4. It posts a review comment on the PR with the analysis results
-5. It sends a notification to Slack
 
 ## Customization
 
-### AI Providers
+### AI Provider
 
-The PR Review Agent uses OpenAI by default, with Anthropic as a fallback. You can customize this behavior by modifying the `analyze_code_with_ai` function in `github_integration/pr_analyzer.py`.
+You can choose between OpenAI and Anthropic as the AI provider for PR reviews by setting the `PR_REVIEW_AI_PROVIDER` environment variable to either `openai` or `anthropic`.
 
-### Review Format
+### Monitored Repositories
 
-You can customize the format of the review by modifying the prompt in the `analyze_code_with_ai` function and the summary generation in the `analyze_pr` function.
+By default, the PR Review Agent will monitor all repositories that send webhooks to it. You can restrict it to specific repositories by setting the `PR_REVIEW_REPOS` environment variable to a comma-separated list of repository names (e.g., `owner/repo1,owner/repo2`).
 
-### Notification Channel
+### Slack Notifications
 
-You can customize the Slack notification channel by setting the `SLACK_NOTIFICATION_CHANNEL` environment variable.
+You can customize the Slack channel for PR review notifications by setting the `PR_REVIEW_SLACK_CHANNEL` environment variable.
 
 ## Troubleshooting
 
 ### Webhook Issues
 
-- Make sure your webhook URL is publicly accessible
-- Check that your webhook secret matches the `GITHUB_WEBHOOK_SECRET` environment variable
-- Verify that you've selected the "Pull requests" event in your webhook settings
 
-### API Token Issues
+If webhooks aren't being received:
+1. Check that the webhook is properly configured in GitHub
+2. Verify that the `GITHUB_WEBHOOK_SECRET` matches the secret in GitHub
+3. Ensure your application is publicly accessible
 
-- Make sure your GitHub token has the `repo` scope
-- Make sure your Slack tokens are correct
-- Make sure your OpenAI or Anthropic API keys are valid
+### Authentication Issues
 
-### Server Issues
+If you see authentication errors:
+1. Verify that your `GITHUB_TOKEN` is valid and has the necessary permissions
+2. Check that the token has access to the repositories you're trying to monitor
 
-- Make sure your server is running and accessible
-- Check the logs for any errors
-- Make sure the required environment variables are set
+### AI Provider Issues
+
+If the AI analysis fails:
+1. Verify that the appropriate API key is set (`OPENAI_API_KEY` or `ANTHROPIC_API_KEY`)
+2. Check that the specified model is available for your account
+3. Ensure you have sufficient API credits/quota

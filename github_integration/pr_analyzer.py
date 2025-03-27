@@ -1,52 +1,17 @@
-import logging
+
+"""
+PR analyzer for GitHub PR review agent.
+"""
+
 import os
-import requests
-import json
-from typing import Dict, Any, List, Optional, Tuple
-from ai.multi_instance_manager import manager
+import logging
+import base64
+from typing import Dict, List, Any, Optional, Tuple
+import anthropic
+import openai
+from github_integration.github_api import get_pr_details, get_pr_files
 
 logger = logging.getLogger(__name__)
-
-# GitHub API base URL
-GITHUB_API_BASE = "https://api.github.com"
-
-def get_github_token() -> str:
-    """
-    Get the GitHub token from environment variables.
-    
-    Returns:
-        The GitHub token
-    
-    Raises:
-        ValueError: If the GitHub token is not set
-    """
-    token = os.environ.get("GITHUB_TOKEN")
-    if not token:
-        raise ValueError("GITHUB_TOKEN environment variable not set")
-    return token
-
-def get_pr_files(repo_name: str, pr_number: int) -> List[Dict[str, Any]]:
-    """
-    Get the files changed in a PR.
-    
-    Args:
-        repo_name: The repository name (e.g., "owner/repo")
-        pr_number: The PR number
-    
-    Returns:
-        A list of files changed in the PR
-    """
-    token = get_github_token()
-    url = f"{GITHUB_API_BASE}/repos/{repo_name}/pulls/{pr_number}/files"
-    headers = {
-        "Authorization": f"token {token}",
-        "Accept": "application/vnd.github.v3+json"
-    }
-    
-    response = requests.get(url, headers=headers)
-    response.raise_for_status()
-    
-    return response.json()
 
 def get_file_content(repo_name: str, file_path: str, ref: str) -> str:
     """
@@ -371,3 +336,4 @@ def get_slack_app():
         logger.error(f"Error getting Slack app: {str(e)}")
     
     return None
+
