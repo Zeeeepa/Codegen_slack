@@ -5,6 +5,7 @@ import logging
 import os
 import time
 import threading
+import sys
 from typing import Optional, Dict, Any
 
 from codegen import CodeAgent, CodegenApp
@@ -26,14 +27,32 @@ class CodegenAgent(BaseAgent):
         """
         super().__init__(**kwargs)
         self.repo = kwargs.get("repo", os.environ.get("CODEGEN_DEFAULT_REPO", "Zeeeepa/bolt-chat"))
-        self.cg_app = CodegenApp(name="bolt-codegen", repo=self.repo)
+        self.cg_app = None
         self.parsing_status = "not_started"  # Possible values: not_started, in_progress, completed, failed
         self.parsing_error = None
         self.parsing_lock = threading.Lock()
         logger.info(f"Initialized CodegenAgent with repo: {self.repo}")
         
+        # Initialize CodegenApp
+        self._initialize_codegen_app()
+        
         # Start repository parsing in a background thread
         self._start_repo_parsing()
+    
+    def _initialize_codegen_app(self):
+        """
+        Initialize the CodegenApp instance.
+        """
+        try:
+            logger.info(f"Initializing CodegenApp for repo: {self.repo}")
+            self.cg_app = CodegenApp(name="bolt-codegen", repo=self.repo)
+            logger.info("CodegenApp initialized successfully")
+            print(f"CodegenApp initialized for repo: {self.repo}")
+            sys.stdout.flush()
+        except Exception as e:
+            logger.error(f"Error initializing CodegenApp: {e}")
+            self.parsing_status = "failed"
+            self.parsing_error = f"Failed to initialize CodegenApp: {str(e)}"
     
     def _start_repo_parsing(self):
         """
@@ -41,24 +60,23 @@ class CodegenAgent(BaseAgent):
         """
         def parse_repo():
             with self.parsing_lock:
+                if not self.cg_app:
+                    logger.error("Cannot start parsing: CodegenApp not initialized")
+                    self.parsing_status = "failed"
+                    self.parsing_error = "CodegenApp not initialized"
+                    return
+                
                 self.parsing_status = "in_progress"
                 try:
                     logger.info(f"Starting repository parsing for {self.repo}")
-                    # Get codebase will trigger parsing if not already parsed
-                    codebase = self.cg_app.get_codebase()
+                    print(f"Starting repository parsing for {self.repo}. This may take a few minutes...")
+                    sys.stdout.flush()
                     
-                    # Check if the repository is already parsed
-                    if codebase.files:
-                        logger.info(f"Repository already parsed. Found {len(codebase.files)} files.")
-                        self.parsing_status = "completed"
-                        return
-                    
-                    # Force a parse by checking out the default branch
-                    logger.info("Repository not parsed yet. Forcing parse...")
-                    codebase.checkout()
+                    # Force a parse by explicitly calling parse_repo
+                    self.cg_app.parse_repo()
                     
                     # Wait for parsing to complete with increasing backoff
-                    max_retries = 10
+                    max_retries = 15
                     base_wait_time = 2
                     for i in range(max_retries):
                         wait_time = base_wait_time * (i + 1)
@@ -66,11 +84,17 @@ class CodegenAgent(BaseAgent):
                         time.sleep(wait_time)
                         
                         # Check if parsing is complete
-                        codebase = self.cg_app.get_codebase()
-                        if codebase.files:
-                            logger.info(f"Repository parsed successfully. Found {len(codebase.files)} files.")
-                            self.parsing_status = "completed"
-                            return
+                        try:
+                            codebase = self.cg_app.get_codebase()
+                            if codebase.files:
+                                logger.info(f"Repository parsed successfully. Found {len(codebase.files)} files.")
+                                print(f"Code Connected! Repository parsed successfully. Found {len(codebase.files)} files.")
+                                sys.stdout.flush()
+                                self.parsing_status = "completed"
+                                return
+                        except KeyError:
+                            # Repository still not parsed, continue waiting
+                            pass
                     
                     # If we get here, parsing didn't complete within the retry limit
                     logger.warning("Repository parsing timed out. Setting status to failed.")
@@ -94,8 +118,15 @@ class CodegenAgent(BaseAgent):
         with self.parsing_lock:
             if self.parsing_status == "failed":
                 logger.info("Retrying repository parsing")
+                print("Retrying repository parsing...")
+                sys.stdout.flush()
                 self.parsing_status = "not_started"
                 self.parsing_error = None
+                
+                # Re-initialize CodegenApp
+                self._initialize_codegen_app()
+                
+                # Start parsing again
                 self._start_repo_parsing()
                 return True
             return False
@@ -126,6 +157,15 @@ class CodegenAgent(BaseAgent):
             The response from the Codegen agent
         """
         logger.info(f"Processing message with CodegenAgent: {message}")
+        
+        # Check if CodegenApp is initialized
+        if not self.cg_app:
+            self._initialize_codegen_app()
+            self._start_repo_parsing()
+            return (
+                f"I'm initializing the Codegen application for repository `{self.repo}`. "
+                f"Please try again in a moment."
+            )
         
         # Check parsing status
         with self.parsing_lock:
@@ -184,8 +224,15 @@ class CodegenAgent(BaseAgent):
                     f"You can ask me to 'retry parsing' to attempt again."
                 )
             
-            # Initialize code agent
-            agent = CodeAgent(codebase=codebase)
+            # Initialize code agent with appropriate model settings
+            model_provider = os.environ.get("CODEGEN_MODEL_PROVIDER", "anthropic")
+            model_name = os.environ.get("CODEGEN_MODEL_NAME", "claude-3-sonnet-20240229")
+            
+            agent = CodeAgent(
+                codebase=codebase,
+                model_provider=model_provider,
+                model_name=model_name
+            )
             
             # Add context if provided
             full_message = message
@@ -196,6 +243,19 @@ class CodegenAgent(BaseAgent):
             response = agent.run(full_message)
             
             return response
+        except KeyError as e:
+            logger.error(f"KeyError processing message with CodegenAgent: {e}")
+            
+            # This is likely a "Repository has not been parsed" error
+            with self.parsing_lock:
+                self.parsing_status = "failed"
+                self.parsing_error = str(e)
+            
+            return (
+                f"I encountered an error: Repository has not been parsed.\n\n"
+                f"This usually means the repository parsing is still in progress or failed. "
+                f"Please wait a few minutes and try again, or ask me to 'retry parsing'."
+            )
         except Exception as e:
             logger.error(f"Error processing message with CodegenAgent: {e}")
             
