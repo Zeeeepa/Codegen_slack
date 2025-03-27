@@ -6,6 +6,7 @@ from .thread_chat import thread_chat_callback
 from .summarize_command import summarize_callback
 from .image_command import image_callback
 from .list_instances import register_list_instances_command
+
 from .review_pr_command import register as register_review_pr_command
 
 

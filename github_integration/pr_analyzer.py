@@ -1,3 +1,4 @@
+
 """
 PR analyzer for GitHub PR review agent.
 """
@@ -17,214 +18,322 @@ def get_file_content(repo_name: str, file_path: str, ref: str) -> str:
     Get the content of a file from GitHub.
     
     Args:
-        repo_name: The name of the repository (e.g., "owner/repo")
-        file_path: The path of the file
-        ref: The reference (branch, commit) to get the file from
+        repo_name: The repository name (e.g., "owner/repo")
+        file_path: The path to the file
+        ref: The git reference (branch, commit, etc.)
     
     Returns:
-        str: The content of the file
-    
-    Raises:
-        Exception: If the request fails
+        The content of the file
     """
-    import requests
-    from github_integration.github_api import get_github_headers
-    
-    url = f"https://api.github.com/repos/{repo_name}/contents/{file_path}?ref={ref}"
-    response = requests.get(url, headers=get_github_headers())
-    
-    if response.status_code != 200:
-        raise Exception(f"Failed to get file content: {response.status_code} {response.text}")
-    
-    content = response.json().get("content", "")
-    if content:
-        return base64.b64decode(content).decode("utf-8")
-    return ""
-
-def analyze_pull_request(repo_name: str, pr_number: int) -> str:
-    """
-    Analyze a pull request and generate improvement suggestions.
-    
-    Args:
-        repo_name: The name of the repository (e.g., "owner/repo")
-        pr_number: The number of the pull request
-    
-    Returns:
-        str: The analysis result with improvement suggestions
-    """
-    logger.info(f"Analyzing PR #{pr_number} in {repo_name}")
-    
-    # Get PR details
-    pr_details = get_pr_details(repo_name, pr_number)
-    pr_title = pr_details.get("title", "")
-    pr_body = pr_details.get("body", "")
-    pr_head_sha = pr_details.get("head", {}).get("sha", "")
-    
-    # Get files changed in the PR
-    files = get_pr_files(repo_name, pr_number)
-    
-    # Prepare analysis context
-    analysis_context = {
-        "pr_title": pr_title,
-        "pr_body": pr_body,
-        "files": []
+    token = get_github_token()
+    url = f"{GITHUB_API_BASE}/repos/{repo_name}/contents/{file_path}?ref={ref}"
+    headers = {
+        "Authorization": f"token {token}",
+        "Accept": "application/vnd.github.v3+json"
     }
     
-    # Process each file
-    for file in files:
-        file_path = file.get("filename", "")
-        file_status = file.get("status", "")
-        file_changes = file.get("patch", "")
+    response = requests.get(url, headers=headers)
+    response.raise_for_status()
+    
+    content_data = response.json()
+    if "content" in content_data:
+        import base64
+        return base64.b64decode(content_data["content"]).decode("utf-8")
+    
+    raise ValueError(f"Could not get content for {file_path}")
+
+def get_pr_diff(repo_name: str, pr_number: int) -> str:
+    """
+    Get the diff of a PR.
+    
+    Args:
+        repo_name: The repository name (e.g., "owner/repo")
+        pr_number: The PR number
+    
+    Returns:
+        The diff of the PR
+    """
+    token = get_github_token()
+    url = f"{GITHUB_API_BASE}/repos/{repo_name}/pulls/{pr_number}"
+    headers = {
+        "Authorization": f"token {token}",
+        "Accept": "application/vnd.github.v3.diff"
+    }
+    
+    response = requests.get(url, headers=headers)
+    response.raise_for_status()
+    
+    return response.text
+
+def get_pr_details(repo_name: str, pr_number: int) -> Dict[str, Any]:
+    """
+    Get the details of a PR.
+    
+    Args:
+        repo_name: The repository name (e.g., "owner/repo")
+        pr_number: The PR number
+    
+    Returns:
+        The details of the PR
+    """
+    token = get_github_token()
+    url = f"{GITHUB_API_BASE}/repos/{repo_name}/pulls/{pr_number}"
+    headers = {
+        "Authorization": f"token {token}",
+        "Accept": "application/vnd.github.v3+json"
+    }
+    
+    response = requests.get(url, headers=headers)
+    response.raise_for_status()
+    
+    return response.json()
+
+def create_pr_comment(repo_name: str, pr_number: int, comment: str) -> Dict[str, Any]:
+    """
+    Create a comment on a PR.
+    
+    Args:
+        repo_name: The repository name (e.g., "owner/repo")
+        pr_number: The PR number
+        comment: The comment text
+    
+    Returns:
+        The created comment
+    """
+    token = get_github_token()
+    url = f"{GITHUB_API_BASE}/repos/{repo_name}/issues/{pr_number}/comments"
+    headers = {
+        "Authorization": f"token {token}",
+        "Accept": "application/vnd.github.v3+json"
+    }
+    
+    data = {
+        "body": comment
+    }
+    
+    response = requests.post(url, headers=headers, json=data)
+    response.raise_for_status()
+    
+    return response.json()
+
+def create_pr_review(repo_name: str, pr_number: int, comments: List[Dict[str, Any]], body: str) -> Dict[str, Any]:
+    """
+    Create a review on a PR.
+    
+    Args:
+        repo_name: The repository name (e.g., "owner/repo")
+        pr_number: The PR number
+        comments: The review comments
+        body: The review body
+    
+    Returns:
+        The created review
+    """
+    token = get_github_token()
+    url = f"{GITHUB_API_BASE}/repos/{repo_name}/pulls/{pr_number}/reviews"
+    headers = {
+        "Authorization": f"token {token}",
+        "Accept": "application/vnd.github.v3+json"
+    }
+    
+    data = {
+        "body": body,
+        "event": "COMMENT",
+        "comments": comments
+    }
+    
+    response = requests.post(url, headers=headers, json=data)
+    response.raise_for_status()
+    
+    return response.json()
+
+def analyze_code_with_ai(code: str, file_path: str, diff: Optional[str] = None) -> str:
+    """
+    Analyze code using AI and provide improvement suggestions.
+    
+    Args:
+        code: The code to analyze
+        file_path: The path to the file
+        diff: The diff of the file (optional)
+    
+    Returns:
+        The analysis result
+    """
+    # Determine the file type
+    file_extension = os.path.splitext(file_path)[1].lower()
+    
+    # Create a prompt for the AI
+    prompt = f"""
+You are an expert code reviewer. Analyze the following code and provide specific, actionable improvement suggestions.
+Always find at least 3 ways to improve the code, even if it looks good. Focus on:
+
+1. Code quality and best practices
+2. Performance optimizations
+3. Security considerations
+4. Readability and maintainability
+5. Potential bugs or edge cases
+
+File path: {file_path}
+File type: {file_extension}
+
+"""
+    
+    if diff:
+        prompt += f"""
+Diff:
+```
+{diff}
+```
+
+"""
+    
+    prompt += f"""
+Code:
+```
+{code}
+```
+
+Provide your analysis in the following format:
+## Code Review: [File Name]
+
+### Strengths
+- [List at least 2 strengths of the code]
+
+### Improvement Suggestions
+1. [First suggestion with specific code example]
+2. [Second suggestion with specific code example]
+3. [Third suggestion with specific code example]
+...
+
+### Summary
+[Brief summary of your review and the most important improvements]
+"""
+    
+    # Use the character instance manager to generate a response
+    try:
+        # Try OpenAI first
+        character = manager.get_openai_character()
+        if character:
+            model = "gpt-4o"
+            system_content = "You are an expert code reviewer. Always provide specific, actionable suggestions for improvement, even if the code looks good."
+            return character.generate_response(prompt, system_content)
+    except Exception as e:
+        logger.warning(f"Error using OpenAI for code analysis: {str(e)}")
+    
+    try:
+        # Fall back to Anthropic
+        character = manager.get_anthropic_character()
+        if character:
+            model = "claude-3-opus-20240229"
+            system_content = "You are an expert code reviewer. Always provide specific, actionable suggestions for improvement, even if the code looks good."
+            return character.generate_response(prompt, system_content)
+    except Exception as e:
+        logger.warning(f"Error using Anthropic for code analysis: {str(e)}")
+    
+    raise ValueError("No AI provider available for code analysis")
+
+def analyze_pr(repo_name: str, pr_number: int, pr_title: str, pr_url: str) -> None:
+    """
+    Analyze a PR and post a review.
+    
+    Args:
+        repo_name: The repository name (e.g., "owner/repo")
+        pr_number: The PR number
+        pr_title: The PR title
+        pr_url: The PR URL
+    """
+    logger.info(f"Analyzing PR #{pr_number} from {repo_name}: {pr_title}")
+    
+    try:
+        # Get PR details
+        pr_details = get_pr_details(repo_name, pr_number)
+        pr_head_sha = pr_details["head"]["sha"]
         
-        # Skip files that are too large or binary
-        if not file_changes and file_status != "removed":
-            logger.info(f"Skipping file {file_path} (no diff available)")
-            continue
+        # Get PR files
+        pr_files = get_pr_files(repo_name, pr_number)
         
-        # Get file content for context if needed
-        file_content = ""
-        if file_status != "removed":
+        # Get PR diff
+        pr_diff = get_pr_diff(repo_name, pr_number)
+        
+        # Analyze each file
+        file_analyses = []
+        for file in pr_files:
+            file_path = file["filename"]
+            file_status = file["status"]
+            
+            # Skip deleted files
+            if file_status == "removed":
+                continue
+            
+            # Get file content
             try:
                 file_content = get_file_content(repo_name, file_path, pr_head_sha)
+                
+                # Get file diff
+                file_diff = None
+                for diff_section in pr_diff.split("diff --git "):
+                    if f" a/{file_path} " in diff_section or f" b/{file_path} " in diff_section:
+                        file_diff = diff_section
+                        break
+                
+                # Analyze the file
+                analysis = analyze_code_with_ai(file_content, file_path, file_diff)
+                file_analyses.append((file_path, analysis))
+                
+                logger.info(f"Analyzed file: {file_path}")
             except Exception as e:
-                logger.warning(f"Failed to get content for {file_path}: {str(e)}")
+                logger.error(f"Error analyzing file {file_path}: {str(e)}")
         
-        analysis_context["files"].append({
-            "path": file_path,
-            "status": file_status,
-            "changes": file_changes,
-            "content": file_content
-        })
+        # Create a summary of all analyses
+        summary = f"# PR Review: {pr_title}\n\n"
+        summary += "I've analyzed your pull request and have some suggestions for improvement. Even though your code looks good, here are some ways to make it even better:\n\n"
+        
+        for file_path, analysis in file_analyses:
+            summary += f"## File: {file_path}\n\n"
+            summary += analysis.strip() + "\n\n"
+        
+        summary += "\nThis review was generated automatically by the PR Review Agent. If you have any questions or need clarification, please let me know!"
+        
+        # Post the review as a comment
+        create_pr_comment(repo_name, pr_number, summary)
+        
+        logger.info(f"Posted review for PR #{pr_number} from {repo_name}")
+        
+        # Notify in Slack
+        try:
+            slack_app = get_slack_app()
+            if slack_app:
+                slack_app.client.chat_postMessage(
+                    channel=os.environ.get("SLACK_NOTIFICATION_CHANNEL", "general"),
+                    text=f"I've reviewed PR #{pr_number} from {repo_name}: {pr_title}\n{pr_url}"
+                )
+        except Exception as e:
+            logger.error(f"Error sending Slack notification: {str(e)}")
     
-    # Generate analysis using AI
-    analysis_result = generate_analysis(analysis_context)
-    
-    return analysis_result
-
-def generate_analysis(context: Dict[str, Any]) -> str:
-    """
-    Generate analysis for a PR using AI.
-    
-    Args:
-        context: The context for analysis
-    
-    Returns:
-        str: The analysis result
-    """
-    # Determine which AI provider to use
-    ai_provider = os.environ.get("PR_REVIEW_AI_PROVIDER", "openai").lower()
-    
-    if ai_provider == "anthropic":
-        return generate_analysis_anthropic(context)
-    else:
-        return generate_analysis_openai(context)
-
-def generate_analysis_openai(context: Dict[str, Any]) -> str:
-    """
-    Generate analysis using OpenAI.
-    
-    Args:
-        context: The context for analysis
-    
-    Returns:
-        str: The analysis result
-    """
-    # Prepare the prompt
-    files_text = ""
-    for file in context["files"]:
-        files_text += f"File: {file['path']} ({file['status']})\n"
-        files_text += f"Changes:\n```diff\n{file['changes']}\n```\n\n"
-        if file['content'] and len(file['content']) < 5000:  # Limit content size
-            files_text += f"Full content:\n```\n{file['content']}\n```\n\n"
-    
-    prompt = f"""
-You are an expert code reviewer. Analyze the following pull request and provide constructive feedback and improvement suggestions.
-
-PR Title: {context['pr_title']}
-PR Description: {context['pr_body']}
-
-Changed Files:
-{files_text}
-
-Please provide a detailed review that includes:
-1. Overall assessment of the changes
-2. Specific code improvement suggestions
-3. Potential bugs or issues
-4. Best practices that could be applied
-5. Performance considerations
-6. Security considerations (if applicable)
-
-Format your response as a GitHub comment with markdown formatting.
-"""
-    
-    # Call OpenAI API
-    try:
-        client = openai.OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
-        response = client.chat.completions.create(
-            model=os.environ.get("PR_REVIEW_OPENAI_MODEL", "gpt-4"),
-            messages=[
-                {"role": "system", "content": "You are an expert code reviewer providing constructive feedback."},
-                {"role": "user", "content": prompt}
-            ],
-            temperature=0.1,
-            max_tokens=4000
-        )
-        return response.choices[0].message.content
     except Exception as e:
-        logger.error(f"Error generating analysis with OpenAI: {str(e)}")
-        return f"Error generating PR analysis: {str(e)}"
+        logger.error(f"Error analyzing PR #{pr_number} from {repo_name}: {str(e)}")
+        raise
 
-def generate_analysis_anthropic(context: Dict[str, Any]) -> str:
+def get_slack_app():
     """
-    Generate analysis using Anthropic.
-    
-    Args:
-        context: The context for analysis
+    Get the Slack app from the FastAPI app state.
     
     Returns:
-        str: The analysis result
+        The Slack app, or None if not available
     """
-    # Prepare the prompt
-    files_text = ""
-    for file in context["files"]:
-        files_text += f"File: {file['path']} ({file['status']})\n"
-        files_text += f"Changes:\n```diff\n{file['changes']}\n```\n\n"
-        if file['content'] and len(file['content']) < 5000:  # Limit content size
-            files_text += f"Full content:\n```\n{file['content']}\n```\n\n"
-    
-    prompt = f"""
-You are an expert code reviewer. Analyze the following pull request and provide constructive feedback and improvement suggestions.
-
-PR Title: {context['pr_title']}
-PR Description: {context['pr_body']}
-
-Changed Files:
-{files_text}
-
-Please provide a detailed review that includes:
-1. Overall assessment of the changes
-2. Specific code improvement suggestions
-3. Potential bugs or issues
-4. Best practices that could be applied
-5. Performance considerations
-6. Security considerations (if applicable)
-
-Format your response as a GitHub comment with markdown formatting.
-"""
-    
-    # Call Anthropic API
     try:
-        client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
-        response = client.messages.create(
-            model=os.environ.get("PR_REVIEW_ANTHROPIC_MODEL", "claude-3-opus-20240229"),
-            max_tokens=4000,
-            temperature=0.1,
-            system="You are an expert code reviewer providing constructive feedback.",
-            messages=[
-                {"role": "user", "content": prompt}
-            ]
-        )
-        return response.content[0].text
+        from fastapi import FastAPI
+        import inspect
+        
+        # Get the current FastAPI app
+        for frame_info in inspect.stack():
+            frame = frame_info.frame
+            if 'app' in frame.f_locals and isinstance(frame.f_locals['app'], FastAPI):
+                fastapi_app = frame.f_locals['app']
+                if hasattr(fastapi_app.state, 'slack_app'):
+                    return fastapi_app.state.slack_app
     except Exception as e:
-        logger.error(f"Error generating analysis with Anthropic: {str(e)}")
-        return f"Error generating PR analysis: {str(e)}"
+        logger.error(f"Error getting Slack app: {str(e)}")
+    
+    return None
+

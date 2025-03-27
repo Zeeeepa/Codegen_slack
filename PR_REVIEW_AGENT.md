@@ -24,6 +24,7 @@ The PR Review Agent is a feature that automatically analyzes GitHub pull request
 The PR Review Agent requires the following environment variables:
 
 ```
+
 # GitHub Configuration
 GITHUB_TOKEN=your-github-token
 GITHUB_WEBHOOK_SECRET=your-webhook-secret
@@ -52,6 +53,7 @@ PR_REVIEW_SLACK_CHANNEL=#github-reviews  # Optional, defaults to #general
 
 ### Automatic PR Reviews
 
+
 Once set up, the PR Review Agent will automatically analyze PRs when they are:
 - Opened for the first time
 - Updated with new commits
@@ -65,6 +67,7 @@ You can manually trigger a PR review using the `/review-pr` command in Slack:
 ```
 /review-pr https://github.com/owner/repo/pull/123
 ```
+
 
 Or using the shorter format:
 
@@ -89,6 +92,7 @@ You can customize the Slack channel for PR review notifications by setting the `
 ## Troubleshooting
 
 ### Webhook Issues
+
 
 If webhooks aren't being received:
 1. Check that the webhook is properly configured in GitHub
