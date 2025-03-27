@@ -21,31 +21,6 @@
                 "command": "/ask-bolty",
                 "description": "Interact with Bolty.",
                 "should_escape": false
-            },
-            {
-                "command": "/localai-settings",
-                "description": "Configure LocalAI compatible API settings (DeepInfra, etc.)",
-                "should_escape": false
-            },
-            {
-                "command": "/ai-preferences",
-                "description": "Configure your AI interaction preferences",
-                "should_escape": false
-            },
-            {
-                "command": "/chat",
-                "description": "Start a thread-based conversation with the AI",
-                "should_escape": false
-            },
-            {
-                "command": "/summarize",
-                "description": "Generate a summary of recent channel messages",
-                "should_escape": false
-            },
-            {
-                "command": "/image",
-                "description": "Generate an image using DALL-E",
-                "should_escape": false
             }
         ]
     },
@@ -58,7 +33,6 @@
                 "chat:write",
                 "chat:write.public",
                 "commands",
-                "files:read",
                 "groups:history",
                 "groups:read",
                 "im:history",
@@ -71,54 +45,13 @@
             ]
         }
     },
-    "functions": {
-        "summary_function": {
-            "title": "Bolty Custom Function",
-            "description": "Interact with an AI Chatbot. Bolty must be a channel member.",
-            "input_parameters": {
-                "user_context": {
-                    "type": "slack#/types/user_context",
-                    "title": "User",
-                    "description": "Tag the user that will be notified when bot responds",
-                    "hint": "Tag user who ran the workflow",
-                    "name": "user_context",
-                    "is_required": true
-                },
-                "channel_id": {
-                    "type": "slack#/types/channel_id",
-                    "title": "Channel",
-                    "description": "Channel that user joined",
-                    "hint": "Input channel that user joined",
-                    "name": "channel_id",
-                    "is_required": true
-                }
-            },
-            "output_parameters": {
-                "user_context": {
-                    "type": "slack#/types/user_context",
-                    "title": "User",
-                    "description": "User that completed the workflow",
-                    "name": "user_context",
-                    "is_required": true
-                },
-                "response": {
-                    "type": "string",
-                    "title": "Summary",
-                    "description": "AI-generated summary of recent messages in channel",
-                    "name": "response",
-                    "is_required": true
-                }
-            }
-        }
-    },
     "settings": {
         "event_subscriptions": {
             "bot_events": [
                 "app_home_opened",
                 "app_mention",
-                "file_shared",
-                "function_executed",
                 "message.channels",
+                "file_shared",
                 "message.groups",
                 "message.im",
                 "message.mpim"
@@ -129,7 +62,9 @@
         },
         "org_deploy_enabled": true,
         "socket_mode_enabled": true,
-        "token_rotation_enabled": false,
-        "function_runtime": "remote"
+        "token_rotation_enabled": false
     }
+}
+
+
 }
