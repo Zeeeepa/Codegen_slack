@@ -9,6 +9,7 @@ from .list_instances import register_list_instances_command
 
 from .review_pr_command import register as register_review_pr_command
 from .agent_commands import register as register_agent_commands
+from .parsing_status_command import register as register_parsing_status_command
 
 
 def register(app: App):
@@ -28,6 +29,9 @@ def register(app: App):
     
     # Register agent commands
     register_agent_commands(app)
+    
+    # Register parsing status command
+    register_parsing_status_command(app)
     
     # Register view submissions
     app.view("localai_settings_modal")(handle_localai_settings_submission)
