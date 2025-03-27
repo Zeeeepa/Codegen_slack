@@ -10,6 +10,7 @@ from threading import Thread
 from listeners import register_listeners
 from env_loader import load_environment_variables
 from github_integration import register_webhook_handler
+from agents.agent_registry import AgentRegistry
 
 # Load and normalize environment variables
 load_environment_variables()
@@ -25,14 +26,16 @@ fastapi_app = FastAPI(title="PR Review Agent")
 register_listeners(app)
 
 # Register GitHub webhook handler
-
 register_webhook_handler(app)
 
-# Start Bolt app
-if __name__ == "__main__":
+# Register default agents
+AgentRegistry.register_default_agents()
+
+# Define function to start Bolt app
+def start_bolt_app():
     SocketModeHandler(app, os.environ.get("SLACK_APP_TOKEN")).start()
 
-# Start both servers
+# Start Bolt app
 if __name__ == "__main__":
     # Start Bolt app in a separate thread
     bolt_thread = Thread(target=start_bolt_app)
