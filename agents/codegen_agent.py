@@ -7,7 +7,7 @@ import time
 import threading
 import sys
 from typing import Optional, Dict, Any
-
+from codegen import Codebase
 from codegen import CodeAgent, CodegenApp
 from .base_agent import BaseAgent
 
