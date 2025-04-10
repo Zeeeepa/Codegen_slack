@@ -7,8 +7,11 @@ import time
 import threading
 import sys
 from typing import Optional, Dict, Any
-from codegen import Codebase
-from codegen import CodeAgent, CodegenApp
+
+# Updated imports to use proper module paths
+from codegen.sdk.core.codebase import Codebase
+from codegen.agents.code.code_agent import CodeAgent
+from codegen.extensions.events.codegen_app import CodegenApp
 from .base_agent import BaseAgent
 
 logger = logging.getLogger(__name__)
